@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import './ScanHistoryPanel.css';
 
 interface ScanSummary {
@@ -23,7 +24,7 @@ export default function ScanHistoryPanel({ onClose, onSelectScan }: ScanHistoryP
 
     useEffect(() => {
         setLoading(true);
-        fetch('http://localhost:8080/api/v1/sentinel/history')
+        fetch(`${API_BASE_URL}/api/v1/sentinel/history`)
             .then(res => res.json())
             .then(data => {
                 setScans(data.scans || []);

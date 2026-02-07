@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar, Line, Pie } from 'react-chartjs-2';
+import { API_BASE_URL } from '../config';
 import './ChatInterface.css';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend);
@@ -29,7 +30,7 @@ export default function ChatInterface({ domain }: ChatInterfaceProps) {
 
     const queryMutation = useMutation({
         mutationFn: async (query: string) => {
-            const response = await fetch('http://localhost:8080/api/v1/query', {
+            const response = await fetch(`${API_BASE_URL}/api/v1/query`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

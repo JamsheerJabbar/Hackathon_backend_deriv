@@ -6,6 +6,7 @@ import ChatInterface from './components/ChatInterface';
 import SentinelDashboard from './components/SentinelDashboard';
 import ScanHistoryPanel from './components/ScanHistoryPanel';
 import type { HistoricalScan } from './components/SentinelDashboard';
+import { API_BASE_URL } from './config';
 import './App.css';
 
 const queryClient = new QueryClient();
@@ -19,14 +20,14 @@ function App() {
 
     useEffect(() => {
         // Check API connection
-        fetch('http://localhost:8080/health')
+        fetch(`${API_BASE_URL}/health`)
             .then(res => res.json())
             .then(() => setIsConnected(true))
             .catch(() => setIsConnected(false));
     }, []);
 
     const handleSelectScan = (scanId: string) => {
-        fetch(`http://localhost:8080/api/v1/sentinel/history/${scanId}`)
+        fetch(`${API_BASE_URL}/api/v1/sentinel/history/${scanId}`)
             .then(res => res.json())
             .then(data => {
                 setHistoricalScan(data);

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import ReactMarkdown from 'react-markdown';
+import { API_BASE_URL } from '../config';
 import './SentinelDashboard.css';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -125,7 +126,7 @@ export default function SentinelDashboard({ historicalScan, onBackToLive }: Sent
             eventSourceRef.current.close();
         }
 
-        const es = new EventSource('http://localhost:8080/api/v1/sentinel/scan/stream');
+        const es = new EventSource(`${API_BASE_URL}/api/v1/sentinel/scan/stream`);
         eventSourceRef.current = es;
 
         es.addEventListener('scan_started', (e) => {

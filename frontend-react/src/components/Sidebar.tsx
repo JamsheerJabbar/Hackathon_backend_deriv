@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API_BASE_URL } from '../config';
 import './Sidebar.css';
 
 const DOMAINS = [
@@ -91,7 +92,7 @@ export default function Sidebar({ mode, setMode, selectedDomain, setSelectedDoma
                     <input
                         type="text"
                         id="api-url"
-                        defaultValue="http://localhost:8080"
+                        defaultValue={API_BASE_URL}
                         readOnly
                     />
                 </div>
