@@ -7,6 +7,9 @@ const state = {
     conversationHistory: [],
     currentResults: null,
     isLoading: false,
+    isSentinelMode: true,
+    sentinelScans: 0,
+    sentinelDetections: [],
     conversationId: generateId()
 };
 
@@ -44,7 +47,21 @@ const elements = {
     toggleViewBtn: document.getElementById('toggle-view'),
     exportBtn: document.getElementById('export-btn'),
     domainBtns: document.querySelectorAll('.domain-btn'),
-    exampleItems: document.querySelectorAll('.example-item')
+    exampleItems: document.querySelectorAll('.example-item'),
+    sentinelBtn: document.getElementById('sentinel-btn'),
+    sentinelDashboard: document.getElementById('sentinel-dashboard'),
+    chatContainer: document.querySelector('.chat-container'),
+    resultsPanel: document.getElementById('results-panel'),
+    sentinelFeed: document.getElementById('sentinel-feed'),
+    scanCount: document.getElementById('scan-count'),
+    criticalAlertCount: document.getElementById('critical-alert-count'),
+    detectionCount: document.getElementById('detection-count'),
+    sentinelGlobalLoading: document.getElementById('sentinel-global-loading'),
+    feeds: {
+        security: document.getElementById('feed-security'),
+        compliance: document.getElementById('feed-compliance'),
+        operations: document.getElementById('feed-operations')
+    }
 };
 
 // ===========================
@@ -188,7 +205,13 @@ function hideLoading() {
     }
 }
 
-function displayResults(results, sql, visConfig) {
+function displayResults(response) {
+    const results = response.results;
+    const sql = response.sql;
+    const visConfig = response.visualization_config;
+    const insight = response.insight;
+    const recommendation = response.recommendation;
+
     if (!results || results.length === 0) {
         elements.resultsContent.innerHTML = `
             <div class="empty-state">
@@ -200,10 +223,16 @@ function displayResults(results, sql, visConfig) {
     }
 
     state.currentResults = results;
-    state.currentVisConfig = visConfig; // Store for switching
+    state.currentVisConfig = visConfig;
+    state.currentInsight = insight;
+    state.currentRecommendation = recommendation;
 
     // Clear previous content
     elements.resultsContent.innerHTML = '';
+
+    // Create Insights Section
+    const insightsSection = renderInsights(insight, recommendation);
+    elements.resultsContent.appendChild(insightsSection);
 
     // Create Visualization Toolbar
     const toolbar = createVizToolbar(visConfig);
@@ -214,9 +243,40 @@ function displayResults(results, sql, visConfig) {
     vizContainer.id = 'viz-container';
     elements.resultsContent.appendChild(vizContainer);
 
-    // Default to Table view, but if recommendation is stronf, maybe user wants to see it?
-    // User said: "user will select". So let's show Table by default but make the recommendation obvious.
+    // Default to Table view
     renderVisualization('table');
+}
+
+function renderInsights(insight, recommendation) {
+    const container = document.createElement('div');
+    container.className = 'insights-box';
+
+    let insightHtml = '';
+    if (insight) {
+        const insightContent = Array.isArray(insight) ? insight.join(' ') : insight;
+        insightHtml = `
+            <div class="insight-item">
+                <div class="insight-label">💡 AI Insight</div>
+                <div class="insight-text">${marked.parse(insightContent)}</div>
+            </div>
+        `;
+    }
+
+    let recHtml = '';
+    if (recommendation) {
+        const recContent = Array.isArray(recommendation) ? recommendation.map(r => `<li>${r}</li>`).join('') : `<li>${recommendation}</li>`;
+        recHtml = `
+            <div class="rec-item">
+                <div class="rec-label">⚖️ Recommended Action</div>
+                <div class="rec-list">
+                    <ul>${Array.isArray(recommendation) ? recContent : marked.parse(recommendation)}</ul>
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = insightHtml + recHtml;
+    return container;
 }
 
 function createVizToolbar(visConfig) {
@@ -551,7 +611,7 @@ async function handleSendMessage() {
             });
 
             // Display results
-            displayResults(response.results, response.sql, response.visualization_config);
+            displayResults(response);
         } else if (response.status === 'failed') {
             showError(response.error || 'Query execution failed');
             if (response.sql) {
@@ -668,6 +728,150 @@ function handleExport() {
 }
 
 // ===========================
+// Sentinel Functions
+// ===========================
+async function toggleSentinelMode() {
+    state.isSentinelMode = !state.isSentinelMode;
+
+    if (state.isSentinelMode) {
+        elements.sentinelBtn.classList.add('active');
+        elements.chatContainer.classList.add('hidden');
+        elements.resultsPanel.classList.add('hidden');
+        elements.sentinelDashboard.classList.remove('hidden');
+        elements.sentinelBtn.innerHTML = '<span class="icon">💬</span> QUERY CHAT';
+        runSentinelScan();
+    } else {
+        elements.sentinelBtn.classList.remove('active');
+        elements.chatContainer.classList.remove('hidden');
+        elements.resultsPanel.classList.remove('hidden');
+        elements.sentinelDashboard.classList.add('hidden');
+        elements.sentinelBtn.innerHTML = '<span class="pulse-ring"></span><span class="icon">🛰️</span> SENTINEL MODE';
+    }
+}
+
+async function runSentinelScan() {
+    elements.sentinelGlobalLoading.classList.remove('hidden');
+    Object.values(elements.feeds).forEach(f => f.innerHTML = '');
+
+    try {
+        const response = await fetch(`${state.apiUrl}/api/v1/sentinel/scan`);
+        const data = await response.json();
+
+        state.sentinelScans++;
+        state.sentinelDetections = data.detections;
+
+        renderSentinelDetections(data.detections);
+        updateSentinelStats(data.detections);
+    } catch (error) {
+        console.error('Sentinel Scan Failed:', error);
+    } finally {
+        elements.sentinelGlobalLoading.classList.add('hidden');
+    }
+}
+
+function renderSentinelDetections(detections) {
+    // Group detections for 3 columns
+    const columns = {
+        security: detections.filter(d => d.domain === 'security' || d.domain === 'risk'),
+        compliance: detections.filter(d => d.domain === 'compliance'),
+        operations: detections.filter(d => d.domain === 'operations')
+    };
+
+    Object.keys(columns).forEach(colKey => {
+        const container = elements.feeds[colKey];
+        columns[colKey].forEach(det => {
+            container.appendChild(createDetectionCard(det));
+        });
+    });
+}
+
+function createDetectionCard(det) {
+    const card = document.createElement('div');
+    card.className = `detection-card severity-${det.severity} mini`;
+
+    // Create visualization if recommended
+    let chartHtml = '';
+    const hasData = det.results && det.results.length > 0;
+    const hasViz = det.visualization_config && det.visualization_config.chart_type !== 'table';
+
+    if (hasData && hasViz) {
+        chartHtml = `<div class="mini-chart-container"><canvas id="chart-${det.mission_id}"></canvas></div>`;
+    }
+
+    card.innerHTML = `
+        <div class="detection-meta">
+            <span class="severity-pill ${det.severity}">${det.severity}</span>
+            <span class="detection-time">LIVE</span>
+        </div>
+        <div class="detection-body">
+            <h5>${det.mission_name}</h5>
+            ${chartHtml}
+            <div class="compact-insight">
+                ${marked.parse(det.insight || '')}
+            </div>
+            ${det.recommendation ? `
+                <div class="mini-rec">
+                    <strong>Protocol:</strong> ${Array.isArray(det.recommendation) ? det.recommendation[0] : (typeof det.recommendation === 'string' ? det.recommendation.substring(0, 100) : '')}
+                </div>
+            ` : ''}
+        </div>
+    `;
+
+    // Initialize chart if needed after element is in DOM
+    if (hasData && hasViz) {
+        setTimeout(() => {
+            const canvas = document.getElementById(`chart-${det.mission_id}`);
+            if (canvas) {
+                createMiniChart(canvas, det.results, det.visualization_config);
+            }
+        }, 100);
+    }
+
+    return card;
+}
+
+function createMiniChart(canvas, data, config) {
+    const ctx = canvas.getContext('2d');
+    const chartType = config.chart_type === 'area' ? 'line' : (config.chart_type || 'bar');
+
+    // Safety check for keys
+    const xKey = config.x_axis_key;
+    const yKey = Array.isArray(config.y_axis_key) ? config.y_axis_key[0] : config.y_axis_key;
+
+    new Chart(ctx, {
+        type: chartType,
+        data: {
+            labels: data.slice(0, 5).map(row => row[xKey] || 'N/A'),
+            datasets: [{
+                label: yKey,
+                data: data.slice(0, 5).map(row => parseFloat(row[yKey]) || 0),
+                backgroundColor: 'rgba(99, 102, 241, 0.4)',
+                borderColor: '#6366f1',
+                borderWidth: 1,
+                fill: config.chart_type === 'area'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: true } },
+            scales: {
+                x: { display: false },
+                y: { display: false }
+            }
+        }
+    });
+}
+
+function updateSentinelStats(detections) {
+    elements.scanCount.textContent = state.sentinelScans;
+    elements.detectionCount.textContent = detections.length;
+
+    const criticalCount = detections.filter(d => d.severity === 'CRITICAL').length;
+    elements.criticalAlertCount.textContent = criticalCount;
+}
+
+// ===========================
 // Global Functions (for inline handlers)
 // ===========================
 window.copySqlToClipboard = function (btn) {
@@ -723,6 +927,7 @@ elements.exampleItems.forEach(item => {
 });
 
 elements.exportBtn.addEventListener('click', handleExport);
+elements.sentinelBtn.addEventListener('click', toggleSentinelMode);
 
 // ===========================
 // Initialization
@@ -738,6 +943,11 @@ async function initialize() {
 
     // Focus input
     elements.queryInput.focus();
+
+    if (state.isSentinelMode) {
+        elements.sentinelBtn.innerHTML = '<span class="icon">💬</span> QUERY CHAT';
+        runSentinelScan();
+    }
 
     console.log('✅ Initialization complete');
 }

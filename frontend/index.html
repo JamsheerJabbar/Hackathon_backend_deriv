@@ -60,6 +60,14 @@
             <!-- Sidebar -->
             <aside class="sidebar">
                 <div class="sidebar-section">
+                    <button class="sentinel-toggle-btn" id="sentinel-btn">
+                        <span class="pulse-ring"></span>
+                        <span class="icon">🛰️</span>
+                        SENTINEL MODE
+                    </button>
+                </div>
+
+                <div class="sidebar-section">
                     <h3>Domain Selection</h3>
                     <div class="domain-selector">
                         <button class="domain-btn active" data-domain="general">
@@ -118,7 +126,7 @@
             </aside>
 
             <!-- Chat Area -->
-            <div class="chat-container">
+            <div class="chat-container hidden">
                 <div class="chat-header">
                     <h2>AI Query Assistant</h2>
                     <button class="clear-chat-btn" id="clear-chat">
@@ -130,7 +138,7 @@
                     </button>
                 </div>
 
-                <div class="messages-container" id="messages">
+                <div class="messages-container hidden" id="messages">
                     <div class="welcome-message">
                         <h2>👋 Welcome to DerivInsight</h2>
                         <p>Ask me anything about your data in natural language. I'll convert it to SQL and show you the
@@ -168,8 +176,68 @@
                 </div>
             </div>
 
+            <!-- Sentinel Dashboard -->
+            <div class="sentinel-container" id="sentinel-dashboard">
+                <div class="sentinel-header">
+                    <div class="sentinel-title-group">
+                        <span class="sentinel-badge">LIVE MONITORING</span>
+                        <h2>Sentinel Mission Control</h2>
+                    </div>
+                    <div class="sentinel-status">
+                        <span class="status-label">Global Health:</span>
+                        <span class="status-value secured">SECURED</span>
+                    </div>
+                </div>
+
+                <div class="sentinel-stats-grid">
+                    <div class="sentinel-stat-card">
+                        <div class="stat-label">System Scans</div>
+                        <div class="stat-value" id="scan-count">0</div>
+                    </div>
+                    <div class="sentinel-stat-card">
+                        <div class="stat-label">Critical Alerts</div>
+                        <div class="stat-value warning" id="critical-alert-count">0</div>
+                    </div>
+                    <div class="sentinel-stat-card">
+                        <div class="stat-label">AI Detections</div>
+                        <div class="stat-value success" id="detection-count">0</div>
+                    </div>
+                </div>
+
+                <div class="sentinel-grid-3">
+                    <div class="sentinel-section" id="section-security">
+                        <div class="section-header">
+                            <span class="icon">🛡️</span>
+                            <h4>Security & Risk</h4>
+                        </div>
+                        <div class="mission-list" id="feed-security"></div>
+                    </div>
+
+                    <div class="sentinel-section" id="section-compliance">
+                        <div class="section-header">
+                            <span class="icon">📜</span>
+                            <h4>Compliance</h4>
+                        </div>
+                        <div class="mission-list" id="feed-compliance"></div>
+                    </div>
+
+                    <div class="sentinel-section" id="section-operations">
+                        <div class="section-header">
+                            <span class="icon">📈</span>
+                            <h4>Operations</h4>
+                        </div>
+                        <div class="mission-list" id="feed-operations"></div>
+                    </div>
+                </div>
+
+                <div class="sentinel-loading hidden" id="sentinel-global-loading">
+                    <div class="scanner-bar"></div>
+                    <p>Synchronizing Global Sentinel Directives...</p>
+                </div>
+            </div>
+
             <!-- Results Panel -->
-            <div class="results-panel" id="results-panel">
+            <div class="results-panel hidden" id="results-panel">
                 <div class="results-header">
                     <h3>Results & Visualizations</h3>
                     <div class="results-actions">
