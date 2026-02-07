@@ -10,56 +10,57 @@
 
 ## 🏗️ System Architecture
 
-Our engine utilizes a **Multi-Agent Decoupled Architecture** orchestrated via **LangGraph**. This ensures that every natural language request is not just translated, but validated, executed, and synthesized into strategic advice.
+Our engine utilizes a **Multi-Agent Orchestration Flow** powered by **LangGraph**. This ensures every natural language request is not just translated, but validated, executed, and synthesized into strategic advice.
 
 ```mermaid
-graph LR
-    subgraph Client ["Executive Layer"]
-        A([User Query]) --- B[InsightOS Interface]
+graph TD
+    subgraph Client ["Interface"]
+        A([Executive Query]) --> B[FastAPI Endpoint]
     end
 
-    subgraph Orchestrator ["LangGraph Orchestration Layer"]
-        B --> C{Domain Router}
-        C -- "Security" --> D[Security Node]
-        C -- "Equity" --> E[Equity Node]
-        C -- "Ops" --> F[Ops Node]
-        D & E & F --> G[Few-Shot Retriever]
-        G --> H[SQL Generation Agent]
-        H --> I{SQL Validator}
-        I -- "Invalid" --> J[Self-Repair Logic]
-        J --> H
-    end
-
-    subgraph Data ["Execution & Storage Layer"]
-        I -- "Success" --> K[(Financial Database)]
-        K --> L[Structured JSON Result]
+    subgraph NL2SQL_Pipeline ["NL2SQL Orchestration Layer (LangGraph)"]
+        B --> C[Intent Classifier & Domain Router]
+        
+        %% Domain Logic
+        C -.-> |Domains| D{Operations | Risk | Security | Compliance}
+        D -.-> |Inject Context| E[Schema & Few-Shot Retriever]
+        
+        E --> F[SQL Generation Agent]
+        F --> G{SQL Validator}
+        
+        %% Self-Repair Loop
+        G -- "Invalid" --> H[Self-Repair Node]
+        H -- "Retry with Error" --> F
+        
+        G -- "Success" --> I[Secure Query Execution]
     end
 
     subgraph Reasoning ["The Virtual CIO Engine"]
-        L --> M[Contextual Synthesis Agent]
-        M --> N[Business Recommendation Engine]
-        N --> O([Actionable Insight Profile])
+        I --> J[Visualization Discovery]
+        J --> K[Executive Insight Generator]
+        K --> L[Strategic Recommendation Engine]
     end
 
-    O --> B
+    L --> M([Final Executive Briefing])
+    M --> B
 
     %% Styling
     style A fill:#f9f,stroke:#333,stroke-width:2px
     style C fill:#6b5b95,stroke:#fff,color:#fff
-    style H fill:#f96,stroke:#333
-    style I fill:#feb236,stroke:#333
-    style K fill:#d64161,stroke:#fff,color:#fff
-    style M fill:#00d2ff,stroke:#333,stroke-width:2px
-    style O fill:#3ff,stroke:#333,stroke-width:4px
+    style F fill:#f96,stroke:#333
+    style G fill:#feb236,stroke:#333
+    style I fill:#d64161,stroke:#fff,color:#fff
+    style L fill:#00d2ff,stroke:#333,stroke-width:2px
+    style M fill:#3ff,stroke:#333,stroke-width:4px
 ```
 
 ---
 
-### **Component Breakdown**
-1.  **Domain Router**: Automatically identifies the business context (Risk, Compliance, Operations) to select the correct prompt templates and few-shot examples.
-2.  **Few-Shot Retriever**: Injects ground-truth SQL examples into the prompt to ensure extreme precision for your specific schema.
-3.  **Self-Repair Node**: If a query fails, the system captures the SQLite error, feeds it back to Gemini, and regenerates a corrected version in real-time.
-4.  **CIO Reasoning Engine**: The final LLM pass that translates raw numbers into "Strategy-Speak," focusing on risk mitigation and revenue growth.
+### **Pipeline Breakdown**
+1.  **Intent Classifier & Domain Router**: Determines the request type (Selection, Aggregation, Comparison) and maps it to one of our target domains: **Operations**, **Risk**, **Security**, or **Compliance**.
+2.  **Few-Shot Retriever**: Pulls domain-specific SQLite examples and schema metadata to provide "in-context learning" for the LLM.
+3.  **Self-Healing Logic**: If a generated SQL query fails validation or execution, the system captures the SQLite error, analyzes it, and performs a "hot-fix" to ensure continuity.
+4.  **Virtual CIO Node**: Instead of returning raw JSON, the final stage synthesizes data into human-readable **Insights** (what happened) and **Recommendations** (what to do next).
 
 ---
 
