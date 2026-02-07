@@ -110,19 +110,25 @@ async def execute_query_node(state: GraphState) -> Dict[str, Any]:
     sql = state["generated_sql"]
     try:
         results = db_service.execute(sql)
-        logger.info(f"Query execution returned {len(results)} rows.")
+        logger.info(f"Query execution successful. Rows: {len(results)}")
         return {"query_result": results, "status": "success"}
     except Exception as e:
-        logger.error(f"Execution Error: {str(e)}")
+        logger.error(f"SQL EXECUTION ERROR: {str(e)}")
         return {"query_result": None, "status": "failed", "validation_error": str(e)}
 
 async def recommend_visualization_node(state: GraphState) -> Dict[str, Any]:
     """Analyze results and recommend visualization."""
+    logger.info("Node: [recommend_visualization]")
     query = state["user_question"]
     sql = state.get("generated_sql", "")
     results = state.get("query_result", [])
     
+    if not results:
+        logger.info("No results for visualization recommendation.")
+        return {"visualization_config": None}
+
     vis_config = await visualization_module.recommend(query, sql, results)
+    logger.info(f"Visualization recommended: {vis_config.get('chart_type') if vis_config else 'None'}")
     
     # If LLM generated mock data because real results were empty
     if vis_config and vis_config.get("is_mock") and "mock_data" in vis_config:
@@ -140,11 +146,14 @@ async def insight_recommendation_node(state: GraphState) -> Dict[str, Any]:
     query = state["user_question"]
     results = state.get("query_result", [])
     domain = state.get("domain", "general")
+    status = state.get("status", "unknown")
     
-    if state["status"] != "success":
+    if status != "success":
+        logger.info(f"Skipping insights because status is {status}")
         return {}
 
     insights = await insight_module.generate(query, results, domain)
+    logger.info("Insights generated successfully.")
     
     return {
         "insight": insights.get("insight"),
@@ -281,8 +290,10 @@ workflow.add_conditional_edges(
 
 workflow.add_edge("repair_sql", "validate_sql")
 workflow.add_edge("execute_query", "recommend_visualization")
-workflow.add_edge("recommend_visualization", "insight_recommendation")
-workflow.add_edge("insight_recommendation", "format_response")
+workflow.add_edge("execute_query", "insight_recommendation")
+
+# Join parallel branches
+workflow.add_edge(["recommend_visualization", "insight_recommendation"], "format_response")
 workflow.add_edge("format_response", END)
 
 app_graph = workflow.compile()

@@ -1,10 +1,16 @@
 from pydantic_settings import BaseSettings
+from pydantic import model_validator
 from typing import Optional
 from dotenv import load_dotenv
+from urllib.parse import quote
 import os
 
 # Explicitly load .env file
 load_dotenv()
+
+# Default Redis URL (local); overridden by REDIS_URL or built from REDIS_* below
+_DEFAULT_REDIS_URL = "hack-deriv-realtime-6ur8gt.serverless.aps1.cache.amazonaws.com:6379"
+
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "NL2SQL Pipeline"
@@ -27,19 +33,37 @@ class Settings(BaseSettings):
     SCHEMA_PATH: str = "app/files/derivinsight_schema.sql"
     MOCK_DATA_SCRIPT_PATH: str = "app/files/generate_mock_data.py"
     
-    # Cache Settings
-    REDIS_URL: str = "redis://localhost:6379/0"
+    # Cache / Redis (Valkey) Settings
+    # Option A: Set REDIS_URL directly (e.g. rediss://:AUTH_TOKEN@host:6379/0)
+    REDIS_URL: str = _DEFAULT_REDIS_URL
+    # Option B: Build URL from parts (REDIS_HOST takes precedence over REDIS_URL)
+    REDIS_HOST: Optional[str] = "hack-deriv-realtime-6ur8gt.serverless.aps1.cache.amazonaws.com"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: Optional[str] = None
+    REDIS_USE_SSL: bool = True  # Set True for AWS ElastiCache Valkey (in-transit encryption)
+    REDIS_DB: int = 0
+
+    @model_validator(mode="after")
+    def build_redis_url_from_parts(self) -> "Settings":
+        """If REDIS_HOST is set, build REDIS_URL from REDIS_* parts (for AWS Valkey)."""
+        if not self.REDIS_HOST:
+            return self
+        scheme = "rediss"
+        password = quote(self.REDIS_PASSWORD, safe="") if self.REDIS_PASSWORD else ""
+        auth = f":{password}@" if password else ""
+        self.REDIS_URL = f"{scheme}://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        return self
     
     # ECS worker tasks (optional; if set, API can start/stop engine/generator via ECS)
-    ECS_CLUSTER: Optional[str] = None
-    ECS_TASK_DEFINITION: Optional[str] = None # single task def; command overridden per run
-    ECS_ENGINE_TASK_DEFINITION: Optional[str] = None  # fallback if ECS_TASK_DEFINITION not set
-    ECS_GENERATOR_TASK_DEFINITION: Optional[str] = None
+    ECS_CLUSTER: Optional[str] = os.getenv("ECS_CLUSTER", "HackathonDerivBackend")
+    ECS_TASK_DEFINITION: Optional[str] = os.getenv("ECS_TASK_DEFINITION", None) # single task def; command overridden per run
+    ECS_ENGINE_TASK_DEFINITION: Optional[str] = os.getenv("ECS_ENGINE_TASK_DEFINITION", None)  # fallback if ECS_TASK_DEFINITION not set
+    ECS_GENERATOR_TASK_DEFINITION: Optional[str] = os.getenv("ECS_GENERATOR_TASK_DEFINITION", None)
     ECS_ENGINE_WORKER_CONTAINER_NAME: str = "alerting-worker-container"  # MUST match container name in task definition
     ECS_GENERATOR_WORKER_CONTAINER_NAME: str = "event-generator-worker-container"
     
-    ECS_SUBNETS: Optional[str] = None  # comma-separated subnet IDs
-    ECS_SECURITY_GROUPS: Optional[str] = None  # comma-separated security group IDs
+    ECS_SUBNETS: Optional[str] = os.getenv("ECS_SUBNETS", None)  # comma-separated subnet IDs
+    ECS_SECURITY_GROUPS: Optional[str] = os.getenv("ECS_SECURITY_GROUPS", None)  # comma-separated security group IDs
     ECS_LAUNCH_TYPE: str = "FARGATE"
     
     # App Settings
