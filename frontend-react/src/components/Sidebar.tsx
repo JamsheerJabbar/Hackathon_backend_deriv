@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import './Sidebar.css';
 
 const DOMAINS = [
@@ -14,6 +13,12 @@ const EXAMPLE_QUERIES = [
     'What are the compliance violations in the last 30 days?',
     'List all open security risks',
     'Show operational metrics for last quarter',
+];
+
+const SENTINEL_DOMAINS = [
+    { icon: '🛡️', label: 'Security & Risk', desc: 'Login anomalies, suspicious transactions, high-risk users' },
+    { icon: '📜', label: 'Compliance', desc: 'PEP violations, KYC gaps, regulatory breaches' },
+    { icon: '⚙️', label: 'Operations', desc: 'Payment failures, system errors, performance issues' },
 ];
 
 interface SidebarProps {
@@ -49,7 +54,68 @@ export default function Sidebar({ mode, setMode, selectedDomain, setSelectedDoma
                 </div>
             )}
 
-            {/* Domain Selection */}
+            {/* Sentinel: Domain Monitoring Legend */}
+            {mode === 'sentinel' && (
+                <div className="sidebar-section">
+                    <h3>Monitoring Domains</h3>
+                    <div className="sentinel-domain-list">
+                        {SENTINEL_DOMAINS.map((d, i) => (
+                            <div key={i} className="sentinel-domain-item">
+                                <span className="sentinel-domain-icon">{d.icon}</span>
+                                <div>
+                                    <div className="sentinel-domain-label">{d.label}</div>
+                                    <div className="sentinel-domain-desc">{d.desc}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Sentinel: Severity Legend */}
+            {mode === 'sentinel' && (
+                <div className="sidebar-section">
+                    <h3>Severity Levels</h3>
+                    <div className="severity-legend">
+                        <div className="severity-legend-item">
+                            <span className="severity-dot critical"></span>
+                            <span>Critical</span>
+                            <span className="severity-legend-hint">Immediate action</span>
+                        </div>
+                        <div className="severity-legend-item">
+                            <span className="severity-dot high"></span>
+                            <span>High</span>
+                            <span className="severity-legend-hint">Urgent review</span>
+                        </div>
+                        <div className="severity-legend-item">
+                            <span className="severity-dot medium"></span>
+                            <span>Medium</span>
+                            <span className="severity-legend-hint">Monitor closely</span>
+                        </div>
+                        <div className="severity-legend-item">
+                            <span className="severity-dot low"></span>
+                            <span>Low</span>
+                            <span className="severity-legend-hint">Informational</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Sentinel: Pipeline Info */}
+            {mode === 'sentinel' && (
+                <div className="sidebar-section">
+                    <h3>Scan Pipeline</h3>
+                    <div className="pipeline-steps">
+                        <div className="pipeline-step"><span className="pipeline-num">1</span>AI Brainstorms Missions</div>
+                        <div className="pipeline-step"><span className="pipeline-num">2</span>NL2SQL Execution</div>
+                        <div className="pipeline-step"><span className="pipeline-num">3</span>Deep Dive Follow-ups</div>
+                        <div className="pipeline-step"><span className="pipeline-num">4</span>Cross-Domain Correlation</div>
+                        <div className="pipeline-step"><span className="pipeline-num">5</span>Intelligence Brief</div>
+                    </div>
+                </div>
+            )}
+
+            {/* Chat: Domain Selection */}
             {mode === 'chat' && (
                 <div className="sidebar-section">
                     <h3>Domain Selection</h3>
@@ -68,7 +134,7 @@ export default function Sidebar({ mode, setMode, selectedDomain, setSelectedDoma
                 </div>
             )}
 
-            {/* Quick Examples */}
+            {/* Chat: Quick Examples */}
             {mode === 'chat' && (
                 <div className="sidebar-section">
                     <h3>Quick Examples</h3>
@@ -82,20 +148,6 @@ export default function Sidebar({ mode, setMode, selectedDomain, setSelectedDoma
                     </div>
                 </div>
             )}
-
-            {/* API Configuration */}
-            <div className="sidebar-section">
-                <h3>API Configuration</h3>
-                <div className="api-config">
-                    <label htmlFor="api-url">API Endpoint</label>
-                    <input
-                        type="text"
-                        id="api-url"
-                        defaultValue="http://localhost:8080"
-                        readOnly
-                    />
-                </div>
-            </div>
         </aside>
     );
 }

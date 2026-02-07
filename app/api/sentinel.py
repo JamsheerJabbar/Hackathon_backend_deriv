@@ -9,7 +9,7 @@ from app.orchestration.narrative_generator import narrative_generator
 from app.orchestration.scan_memory import scan_memory
 from app.services.slack_notifier import notify_slack, notify_slack_narrative
 from app.core.config import settings
-from app.core.logger import logger, _mission_log_buffer
+from app.core.logger import logger, _mission_log_buffer, _sse_event_queue, _mission_meta
 from datetime import datetime
 import asyncio
 import json
@@ -24,6 +24,13 @@ async def run_mission(mission: dict) -> dict:
     # Set up per-mission log capture
     log_buf: list = []
     _mission_log_buffer.set(log_buf)
+    # Set mission metadata so the log handler can tag SSE entries
+    _mission_meta.set({
+        "mission_id": mission["id"],
+        "mission_name": mission["name"],
+        "domain": mission["domain"],
+        "severity": mission.get("severity", "MEDIUM"),
+    })
 
     initial_state = {
         "user_question": mission["query"],
@@ -96,6 +103,10 @@ async def stream_sentinel_scan():
     async def event_generator():
         all_results = []
 
+        # Unified event queue for real-time log streaming + mission results
+        event_queue = asyncio.Queue()
+        _sse_event_queue.set(event_queue)
+
         # ── Phase 1: Brainstorm ──────────────────────────────────────────
         logger.info("SENTINEL v2: Brainstorming adaptive missions...")
         missions = await brainstormer.brainstorm_missions(count_per_domain=2)
@@ -119,25 +130,32 @@ async def stream_sentinel_scan():
 
         # ── Phase 2: Execute missions in parallel, stream as they complete ─
         logger.info(f"SENTINEL v2: Executing {len(missions)} missions...")
-        queue = asyncio.Queue()
 
         async def run_and_queue(m):
             result = await run_mission(m)
-            await queue.put(("mission", result))
+            await event_queue.put(("mission", result))
 
         tasks = [asyncio.create_task(run_and_queue(m)) for m in missions]
 
         completed = 0
         total = len(missions)
         while completed < total:
-            event_type, result = await queue.get()
-            all_results.append(result)
-            completed += 1
-            yield _sse("mission_complete", result)
-            # Fire-and-forget Slack alert for HIGH/CRITICAL findings
-            asyncio.create_task(notify_slack(result))
+            event_type, data = await event_queue.get()
+            if event_type == "log":
+                yield _sse("mission_log", data)
+            elif event_type == "mission":
+                all_results.append(data)
+                completed += 1
+                yield _sse("mission_complete", data)
+                asyncio.create_task(notify_slack(data))
 
         await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Drain any remaining log events in the queue
+        while not event_queue.empty():
+            event_type, data = event_queue.get_nowait()
+            if event_type == "log":
+                yield _sse("mission_log", data)
 
         yield _sse("scan_complete", {"total": len(all_results)})
 
@@ -156,24 +174,32 @@ async def stream_sentinel_scan():
 
             if deep_dive_missions:
                 logger.info(f"SENTINEL v2: Running {len(deep_dive_missions)} deep-dive follow-ups...")
-                dd_queue = asyncio.Queue()
 
                 async def run_dd(m):
                     result = await run_mission(m)
-                    await dd_queue.put(result)
+                    await event_queue.put(("mission", result))
 
                 dd_tasks = [asyncio.create_task(run_dd(m)) for m in deep_dive_missions]
 
                 dd_completed = 0
                 dd_total = len(deep_dive_missions)
                 while dd_completed < dd_total:
-                    result = await dd_queue.get()
-                    all_results.append(result)
-                    dd_completed += 1
-                    yield _sse("mission_complete", result)
-                    asyncio.create_task(notify_slack(result))
+                    event_type, data = await event_queue.get()
+                    if event_type == "log":
+                        yield _sse("mission_log", data)
+                    elif event_type == "mission":
+                        all_results.append(data)
+                        dd_completed += 1
+                        yield _sse("mission_complete", data)
+                        asyncio.create_task(notify_slack(data))
 
                 await asyncio.gather(*dd_tasks, return_exceptions=True)
+
+                # Drain remaining logs
+                while not event_queue.empty():
+                    event_type, data = event_queue.get_nowait()
+                    if event_type == "log":
+                        yield _sse("mission_log", data)
 
         # ── Phase 4: Cross-Domain Correlation ────────────────────────────
         clusters = []
@@ -217,7 +243,7 @@ async def stream_sentinel_scan():
 async def run_sentinel_scan():
     """
     Original Sentinel scan — returns all results at once.
-    Kept for backward compatibility. Now includes risk scoring.
+    Kept for backward compatibility. Now includes risk scoring + narrative.
     """
     logger.info("SENTINEL: Running non-streaming scan...")
 
@@ -231,18 +257,26 @@ async def run_sentinel_scan():
 
     tasks = [run_mission(m) for m in missions]
     results = await asyncio.gather(*tasks)
+    results_list = list(results)
 
     # Send Slack alerts for HIGH/CRITICAL findings
-    for r in results:
+    for r in results_list:
         asyncio.create_task(notify_slack(r))
 
+    # Generate narrative and send to Slack
+    narrative = await narrative_generator.generate(
+        detections=results_list,
+        clusters=[],
+        scan_metadata={"total_missions": len(results_list), "timestamp": "LIVE"},
+    )
+    asyncio.create_task(notify_slack_narrative(narrative))
+
     # Record to scan memory
-    results_list = list(results)
     scan_memory.record_scan(results_list)
     scan_id = f"scan-{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}"
-    scan_memory.save_full_scan(scan_id, results_list)
+    scan_memory.save_full_scan(scan_id, results_list, narrative=narrative)
 
-    return {"status": "success", "detections": results_list}
+    return {"status": "success", "detections": results_list, "narrative": narrative}
 
 
 # ─── Scan History Endpoints ─────────────────────────────────────────────────

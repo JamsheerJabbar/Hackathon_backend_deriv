@@ -105,29 +105,46 @@ async def notify_slack(detection: dict) -> bool:
 
 async def notify_slack_narrative(narrative: dict) -> bool:
     """
-    Send the executive intelligence brief summary to Slack.
+    Send the executive intelligence brief to Slack after every scan.
+    Always sends regardless of severity — this is the scan summary.
     """
     overall_risk = narrative.get("overall_risk", 0)
     overall_severity = narrative.get("overall_severity", "LOW")
-    if not _should_alert(overall_severity):
-        return False
 
-    summary = str(narrative.get("executive_summary", ""))[:600]
+    summary = str(narrative.get("executive_summary", ""))[:800]
     actions = narrative.get("immediate_actions", [])
-    sev_icon = {"CRITICAL": "🚨", "HIGH": "⚠️"}.get(overall_severity, "ℹ️")
+    monitoring = narrative.get("monitoring_recommendations", [])
+    threat_vectors = narrative.get("threat_vectors", [])
 
-    actions_text = "\n".join(f"  {i+1}. {a}" for i, a in enumerate(actions[:5]))
+    sev_icon = {"CRITICAL": "🚨", "HIGH": "⚠️", "MEDIUM": "🔶", "LOW": "🟢"}.get(overall_severity, "ℹ️")
+    risk_bar = "🟥" * (overall_risk // 20) + "⬜" * (5 - overall_risk // 20)
 
     lines = [
         f"{sev_icon} *SENTINEL INTELLIGENCE BRIEF*",
         "",
-        f"*Overall Risk:* {overall_risk}/100  |  *Severity:* {overall_severity}",
+        f"*Overall Risk:* {risk_bar}  {overall_risk}/100  |  *Severity:* {overall_severity}",
         "",
         f"*Executive Summary:*\n{summary}",
     ]
 
-    if actions_text:
+    # Threat vectors
+    if threat_vectors:
+        tv_lines = []
+        for tv in threat_vectors[:5]:
+            tv_sev = tv.get("severity", "LOW")
+            tv_icon = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🟢"}.get(tv_sev, "⚪")
+            tv_lines.append(f"  {tv_icon} *{tv.get('name', '')}* ({tv_sev})\n      {tv.get('description', '')[:150]}")
+        lines.append(f"\n*Threat Vectors:*\n" + "\n".join(tv_lines))
+
+    # Immediate actions
+    if actions:
+        actions_text = "\n".join(f"  {i+1}. {a}" for i, a in enumerate(actions[:5]))
         lines.append(f"\n*Immediate Actions:*\n{actions_text}")
+
+    # Monitoring recommendations
+    if monitoring:
+        mon_text = "\n".join(f"  • {m}" for m in monitoring[:3])
+        lines.append(f"\n*Monitoring:*\n{mon_text}")
 
     text = "\n".join(lines)
     channel = settings.SLACK_CHANNEL

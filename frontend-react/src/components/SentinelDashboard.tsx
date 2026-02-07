@@ -18,6 +18,13 @@ interface MissionLog {
     msg: string;
 }
 
+interface StreamingLog extends MissionLog {
+    mission_id: string;
+    mission_name: string;
+    domain: string;
+    severity: string;
+}
+
 interface Detection {
     mission_id: string;
     mission_name: string;
@@ -100,7 +107,10 @@ export default function SentinelDashboard({ historicalScan, onBackToLive }: Sent
     const [progress, setProgress] = useState({ completed: 0, total: 0 });
     const [adaptiveContext, setAdaptiveContext] = useState<any>(null);
     const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
+    const [liveLogFeedOpen, setLiveLogFeedOpen] = useState(true);
+    const [streamingLogs, setStreamingLogs] = useState<StreamingLog[]>([]);
     const eventSourceRef = useRef<EventSource | null>(null);
+    const liveFeedRef = useRef<HTMLDivElement | null>(null);
 
     const toggleLogs = (missionId: string) => {
         setExpandedLogs(prev => {
@@ -117,8 +127,10 @@ export default function SentinelDashboard({ historicalScan, onBackToLive }: Sent
         setClusters([]);
         setNarrative(null);
         setMissionPlan([]);
+        setStreamingLogs([]);
         setPhase('brainstorming');
         setProgress({ completed: 0, total: 0 });
+        setLiveLogFeedOpen(true);
 
         // Close previous connection
         if (eventSourceRef.current) {
@@ -136,10 +148,19 @@ export default function SentinelDashboard({ historicalScan, onBackToLive }: Sent
             setPhase('executing');
         });
 
+        // Real-time individual log entries
+        es.addEventListener('mission_log', (e) => {
+            const log: StreamingLog = JSON.parse(e.data);
+            setStreamingLogs(prev => [...prev, log]);
+        });
+
         es.addEventListener('mission_complete', (e) => {
             const det: Detection = JSON.parse(e.data);
             setDetections(prev => [...prev, det]);
             setProgress(prev => ({ ...prev, completed: prev.completed + 1 }));
+            if (det.logs && det.logs.length > 0) {
+                setExpandedLogs(prev => new Set(prev).add(det.mission_id));
+            }
         });
 
         es.addEventListener('scan_complete', () => {
@@ -220,6 +241,32 @@ export default function SentinelDashboard({ historicalScan, onBackToLive }: Sent
 
     const getSubFindings = (parentId: string) =>
         subFindings.filter(d => d.parent_mission_id === parentId);
+
+    // ─── Live Feed ─────────────────────────────────────────────────────
+    const isScanning = phase !== 'idle' && phase !== 'complete' && phase !== 'error';
+
+    // During scanning: use real-time streamingLogs from SSE mission_log events.
+    // After scan / historical: fall back to logs from detection objects.
+    const historicalLogs: StreamingLog[] = (!isScanning && detections.length > 0)
+        ? detections.flatMap(det =>
+            (det.logs || []).map(log => ({
+                ...log,
+                mission_id: det.mission_id,
+                mission_name: det.mission_name,
+                domain: det.domain,
+                severity: det.severity,
+            }))
+        ).sort((a, b) => a.ts - b.ts)
+        : [];
+
+    const visibleLogs = isScanning ? streamingLogs : historicalLogs;
+
+    // Auto-scroll live feed to bottom when new logs arrive
+    useEffect(() => {
+        if (liveFeedRef.current && liveLogFeedOpen) {
+            liveFeedRef.current.scrollTop = liveFeedRef.current.scrollHeight;
+        }
+    }, [visibleLogs.length, liveLogFeedOpen]);
 
     // ─── Render helpers ─────────────────────────────────────────────────
 
@@ -363,16 +410,26 @@ export default function SentinelDashboard({ historicalScan, onBackToLive }: Sent
                 </div>
             )}
 
-            {/* Header */}
-            <div className="sentinel-header">
+            {/* Header — compact during scanning */}
+            <div className={`sentinel-header ${isScanning ? 'sentinel-header-compact' : ''}`}>
                 <div className="sentinel-title-group">
                     <span className="sentinel-badge">{isHistorical ? 'SCAN ARCHIVE' : 'LIVE MONITORING'}</span>
-                    <h2>Sentinel Mission Control</h2>
-                    {!isHistorical && adaptiveContext?.scan_count > 0 && (
+                    {!isScanning && <h2>Sentinel Mission Control</h2>}
+                    {isScanning && <h2 className="sentinel-title-inline">Sentinel Mission Control</h2>}
+                    {!isHistorical && adaptiveContext?.scan_count > 0 && !isScanning && (
                         <span className="adaptive-badge">ADAPTIVE MODE — Scan #{adaptiveContext.scan_count + 1}</span>
                     )}
                 </div>
                 <div className="sentinel-actions">
+                    {isScanning && (
+                        <div className="compact-stats">
+                            <span className="compact-stat"><strong>{detections.length}</strong> detections</span>
+                            <span className="compact-stat-sep">|</span>
+                            <span className="compact-stat warning">{criticalCount} critical</span>
+                            <span className="compact-stat-sep">|</span>
+                            <span className="compact-stat">{progress.completed}/{progress.total} missions</span>
+                        </div>
+                    )}
                     {!isHistorical && (
                         <button onClick={runScan} className="refresh-btn" disabled={phase !== 'complete' && phase !== 'idle' && phase !== 'error'}>
                             {phase === 'complete' || phase === 'idle' || phase === 'error' ? 'New Scan' : 'Scanning...'}
@@ -381,137 +438,194 @@ export default function SentinelDashboard({ historicalScan, onBackToLive }: Sent
                 </div>
             </div>
 
-            {/* Stats */}
-            <div className="sentinel-stats-grid">
-                <div className="sentinel-stat-card">
-                    <div className="stat-label">System Scans</div>
-                    <div className="stat-value">{scanCount}</div>
-                </div>
-                <div className="sentinel-stat-card">
-                    <div className="stat-label">Critical Alerts</div>
-                    <div className="stat-value warning">{criticalCount}</div>
-                </div>
-                <div className="sentinel-stat-card">
-                    <div className="stat-label">AI Detections</div>
-                    <div className="stat-value success">{detections.length}</div>
-                </div>
-                <div className="sentinel-stat-card">
-                    <div className="stat-label">Scan Progress</div>
-                    <div className="stat-value">{progress.completed}/{progress.total}</div>
-                    {progress.total > 0 && (
-                        <div className="progress-bar">
-                            <div className="progress-fill" style={{ width: `${(progress.completed / progress.total) * 100}%` }} />
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Phase Indicator */}
-            {phase !== 'idle' && phase !== 'complete' && (
-                <div className="phase-indicator">
-                    <div className="scanner-bar" />
-                    <p>
-                        {phase === 'brainstorming' && 'Sentinel Brain generating audit missions...'}
-                        {phase === 'executing' && `Executing missions (${progress.completed}/${progress.total})...`}
-                        {phase === 'analyzing' && 'Deep-dive investigation in progress...'}
-                        {phase === 'correlating' && 'Cross-domain threat correlation...'}
-                        {phase === 'briefing' && 'Generating executive intelligence brief...'}
-                        {phase === 'error' && 'Scan error — click New Scan to retry.'}
-                    </p>
-                </div>
-            )}
-
-            {/* Intelligence Brief */}
-            {narrative && (
-                <div className={`intelligence-brief severity-${narrative.overall_severity}`}>
-                    <div className="brief-header">
-                        <div className="brief-badge">INTELLIGENCE BRIEF</div>
-                        {renderRiskGauge(narrative.overall_risk)}
+            {/* Stats — hidden during scanning */}
+            {!isScanning && (
+                <div className="sentinel-stats-grid">
+                    <div className="sentinel-stat-card">
+                        <div className="stat-label">System Scans</div>
+                        <div className="stat-value">{scanCount}</div>
                     </div>
-                    <div className="brief-summary">
-                        <ReactMarkdown>{narrative.executive_summary}</ReactMarkdown>
+                    <div className="sentinel-stat-card">
+                        <div className="stat-label">Critical Alerts</div>
+                        <div className="stat-value warning">{criticalCount}</div>
                     </div>
-                    {narrative.threat_vectors.length > 0 && (
-                        <div className="threat-vectors">
-                            <h4>Threat Vectors</h4>
-                            {narrative.threat_vectors.map((tv, i) => (
-                                <div key={i} className={`threat-vector-item severity-${tv.severity}`}>
-                                    <span className={`severity-pill small ${tv.severity}`}>{tv.severity}</span>
-                                    <strong>{tv.name}</strong>
-                                    <p>{tv.description}</p>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    <div className="actions-grid">
-                        <div className="immediate-actions">
-                            <h4>Immediate Actions</h4>
-                            <ol>{narrative.immediate_actions.map((a, i) => <li key={i}>{a}</li>)}</ol>
-                        </div>
-                        <div className="monitoring-recs">
-                            <h4>Monitoring Recommendations</h4>
-                            <ul>{narrative.monitoring_recommendations.map((r, i) => <li key={i}>{r}</li>)}</ul>
-                        </div>
+                    <div className="sentinel-stat-card">
+                        <div className="stat-label">AI Detections</div>
+                        <div className="stat-value success">{detections.length}</div>
+                    </div>
+                    <div className="sentinel-stat-card">
+                        <div className="stat-label">Scan Progress</div>
+                        <div className="stat-value">{progress.completed}/{progress.total}</div>
+                        {progress.total > 0 && (
+                            <div className="progress-bar">
+                                <div className="progress-fill" style={{ width: `${(progress.completed / progress.total) * 100}%` }} />
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
 
-            {/* Threat Clusters */}
-            {clusters.length > 0 && (
-                <div className="threat-clusters-section">
-                    <div className="clusters-header">
-                        <span className="clusters-badge">CROSS-DOMAIN CORRELATIONS</span>
-                        <h3>Threat Clusters</h3>
+            {/* Live Agent Activity Feed — main screen element during scanning */}
+            {(visibleLogs.length > 0 || isScanning) && (
+                <div className={`live-feed-section ${isScanning ? 'live-feed-active' : 'live-feed-done'}`}>
+                    <div className="live-feed-header" onClick={() => setLiveLogFeedOpen(prev => !prev)}>
+                        <div className="live-feed-title">
+                            {isScanning && <span className="live-feed-pulse" />}
+                            <span className="live-feed-badge">
+                                {isScanning ? 'LIVE' : 'COMPLETED'}
+                            </span>
+                            <h4>Agent Activity Feed</h4>
+                            <span className="live-feed-count">
+                                {visibleLogs.length} events
+                            </span>
+                            {isScanning && (
+                                <span className="live-feed-phase">
+                                    {phase === 'brainstorming' && 'BRAINSTORMING'}
+                                    {phase === 'executing' && `EXECUTING ${progress.completed}/${progress.total}`}
+                                    {phase === 'analyzing' && 'DEEP DIVE'}
+                                    {phase === 'correlating' && 'CORRELATING'}
+                                    {phase === 'briefing' && 'BRIEFING'}
+                                </span>
+                            )}
+                        </div>
+                        <span className="live-feed-toggle">{liveLogFeedOpen ? '▾' : '▸'}</span>
                     </div>
-                    <div className="clusters-grid">
-                        {clusters.map(cluster => (
-                            <div key={cluster.cluster_id} className={`cluster-card severity-${cluster.severity}`}>
-                                <div className="cluster-top">
-                                    <span className={`severity-pill ${cluster.severity}`}>{cluster.severity}</span>
-                                    <h5>{cluster.threat_name}</h5>
+                    {liveLogFeedOpen && (
+                        <div className={`live-feed-panel ${isScanning ? 'live-feed-panel-active' : ''}`} ref={liveFeedRef}>
+                            {visibleLogs.length === 0 && isScanning && (
+                                <div className="live-feed-waiting">
+                                    <span className="live-feed-cursor">_</span>
+                                    Initializing Sentinel Agent...
                                 </div>
-                                <div className="cluster-narrative">
-                                    <ReactMarkdown>{cluster.narrative}</ReactMarkdown>
+                            )}
+                            {visibleLogs.map((log, i) => {
+                                const prevLog = i > 0 ? visibleLogs[i - 1] : null;
+                                const showMissionHeader = !prevLog || prevLog.mission_id !== log.mission_id;
+                                const isLatest = i === visibleLogs.length - 1 && isScanning;
+                                return (
+                                    <div key={i}>
+                                        {showMissionHeader && (
+                                            <div className={`live-feed-mission-header ${isLatest ? 'live-feed-latest' : ''}`}>
+                                                <span className="live-feed-domain">
+                                                    {log.domain === 'security' ? '🛡️' : log.domain === 'compliance' ? '📜' : log.domain === 'risk' ? '📊' : log.domain === 'operations' ? '⚙️' : '🔍'}
+                                                </span>
+                                                <span className="live-feed-mission-name">{log.mission_name}</span>
+                                                <span className={`severity-pill small ${log.severity}`}>{log.severity}</span>
+                                            </div>
+                                        )}
+                                        <div className={`live-feed-entry log-${log.level} ${isLatest ? 'live-feed-latest' : ''}`}>
+                                            <span className="live-feed-node">{log.node}</span>
+                                            <span className="live-feed-level">{log.level}</span>
+                                            <span className="live-feed-msg">{log.msg}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {isScanning && visibleLogs.length > 0 && (
+                                <div className="live-feed-cursor-line">
+                                    <span className="live-feed-cursor">_</span>
                                 </div>
-                                <div className="cluster-entities">
-                                    {cluster.shared_entities.user_ids?.length ? (
-                                        <span className="entity-tag">Users: {cluster.shared_entities.user_ids.join(', ')}</span>
-                                    ) : null}
-                                    {cluster.shared_entities.countries?.length ? (
-                                        <span className="entity-tag">Countries: {cluster.shared_entities.countries.join(', ')}</span>
-                                    ) : null}
-                                    {cluster.shared_entities.ip_addresses?.length ? (
-                                        <span className="entity-tag">IPs: {cluster.shared_entities.ip_addresses.join(', ')}</span>
-                                    ) : null}
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* === Results sections — only shown after scan completes === */}
+            {!isScanning && (
+                <>
+                    {/* Intelligence Brief */}
+                    {narrative && (
+                        <div className={`intelligence-brief severity-${narrative.overall_severity}`}>
+                            <div className="brief-header">
+                                <div className="brief-badge">INTELLIGENCE BRIEF</div>
+                                {renderRiskGauge(narrative.overall_risk)}
+                            </div>
+                            <div className="brief-summary">
+                                <ReactMarkdown>{narrative.executive_summary}</ReactMarkdown>
+                            </div>
+                            {narrative.threat_vectors.length > 0 && (
+                                <div className="threat-vectors">
+                                    <h4>Threat Vectors</h4>
+                                    {narrative.threat_vectors.map((tv, i) => (
+                                        <div key={i} className={`threat-vector-item severity-${tv.severity}`}>
+                                            <span className={`severity-pill small ${tv.severity}`}>{tv.severity}</span>
+                                            <strong>{tv.name}</strong>
+                                            <p>{tv.description}</p>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div className="cluster-action">
-                                    <strong>Action:</strong> {cluster.recommended_action}
+                            )}
+                            <div className="actions-grid">
+                                <div className="immediate-actions">
+                                    <h4>Immediate Actions</h4>
+                                    <ol>{narrative.immediate_actions.map((a, i) => <li key={i}>{a}</li>)}</ol>
+                                </div>
+                                <div className="monitoring-recs">
+                                    <h4>Monitoring Recommendations</h4>
+                                    <ul>{narrative.monitoring_recommendations.map((r, i) => <li key={i}>{r}</li>)}</ul>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Threat Clusters */}
+                    {clusters.length > 0 && (
+                        <div className="threat-clusters-section">
+                            <div className="clusters-header">
+                                <span className="clusters-badge">CROSS-DOMAIN CORRELATIONS</span>
+                                <h3>Threat Clusters</h3>
+                            </div>
+                            <div className="clusters-grid">
+                                {clusters.map(cluster => (
+                                    <div key={cluster.cluster_id} className={`cluster-card severity-${cluster.severity}`}>
+                                        <div className="cluster-top">
+                                            <span className={`severity-pill ${cluster.severity}`}>{cluster.severity}</span>
+                                            <h5>{cluster.threat_name}</h5>
+                                        </div>
+                                        <div className="cluster-narrative">
+                                            <ReactMarkdown>{cluster.narrative}</ReactMarkdown>
+                                        </div>
+                                        <div className="cluster-entities">
+                                            {cluster.shared_entities.user_ids?.length ? (
+                                                <span className="entity-tag">Users: {cluster.shared_entities.user_ids.join(', ')}</span>
+                                            ) : null}
+                                            {cluster.shared_entities.countries?.length ? (
+                                                <span className="entity-tag">Countries: {cluster.shared_entities.countries.join(', ')}</span>
+                                            ) : null}
+                                            {cluster.shared_entities.ip_addresses?.length ? (
+                                                <span className="entity-tag">IPs: {cluster.shared_entities.ip_addresses.join(', ')}</span>
+                                            ) : null}
+                                        </div>
+                                        <div className="cluster-action">
+                                            <strong>Action:</strong> {cluster.recommended_action}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 3-Column Detection Grid */}
+                    <div className="sentinel-grid-3">
+                        {(['security', 'compliance', 'operations'] as const).map(col => (
+                            <div key={col} className="sentinel-section">
+                                <div className="section-header">
+                                    <span className="icon">{col === 'security' ? '🛡️' : col === 'compliance' ? '📜' : '📈'}</span>
+                                    <h4>{col === 'security' ? 'Security & Risk' : col === 'compliance' ? 'Compliance' : 'Operations'}</h4>
+                                    <span className="section-count">{grouped[col].length}</span>
+                                </div>
+                                <div className="mission-list">
+                                    {grouped[col].map(renderDetectionCard)}
+                                    {phase === 'complete' && grouped[col].length === 0 && (
+                                        <div className="empty-section">No findings</div>
+                                    )}
                                 </div>
                             </div>
                         ))}
                     </div>
-                </div>
+                </>
             )}
-
-            {/* 3-Column Detection Grid */}
-            <div className="sentinel-grid-3">
-                {(['security', 'compliance', 'operations'] as const).map(col => (
-                    <div key={col} className="sentinel-section">
-                        <div className="section-header">
-                            <span className="icon">{col === 'security' ? '🛡️' : col === 'compliance' ? '📜' : '📈'}</span>
-                            <h4>{col === 'security' ? 'Security & Risk' : col === 'compliance' ? 'Compliance' : 'Operations'}</h4>
-                            <span className="section-count">{grouped[col].length}</span>
-                        </div>
-                        <div className="mission-list">
-                            {grouped[col].map(renderDetectionCard)}
-                            {phase === 'executing' && renderSkeletons()}
-                            {phase === 'complete' && grouped[col].length === 0 && (
-                                <div className="empty-section">No findings</div>
-                            )}
-                        </div>
-                    </div>
-                ))}
-            </div>
         </div>
     );
 }
