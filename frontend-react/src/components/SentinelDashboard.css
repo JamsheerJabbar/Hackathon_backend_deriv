@@ -14,8 +14,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1.25rem;
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.08));
-    border: 1px solid rgba(99, 102, 241, 0.25);
+    background: linear-gradient(135deg, rgba(255, 68, 79, 0.1), rgba(255, 68, 79, 0.05));
+    border: 1px solid rgba(255, 68, 79, 0.25);
     border-radius: 12px;
     animation: fadeInUp 0.3s ease-out;
 }
@@ -31,8 +31,8 @@
 
 .history-banner-badge {
     padding: 0.2rem 0.6rem;
-    background: rgba(99, 102, 241, 0.2);
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    background: rgba(255, 68, 79, 0.2);
+    border: 1px solid rgba(255, 68, 79, 0.3);
     border-radius: 8px;
     color: var(--accent);
     font-size: 0.625rem;
@@ -42,7 +42,7 @@
 
 .back-to-live-btn {
     padding: 0.5rem 1rem;
-    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+    background: var(--accent);
     border: none;
     border-radius: 8px;
     color: white;
@@ -50,12 +50,13 @@
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 10px rgba(239, 68, 68, 0.25);
+    box-shadow: 0 2px 10px rgba(255, 68, 79, 0.25);
 }
 
 .back-to-live-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);
+    box-shadow: 0 4px 15px rgba(255, 68, 79, 0.35);
+    background: var(--accent-hover);
 }
 
 /* ─── Header ─────────────────────────────────────────────────────────────── */
@@ -77,8 +78,8 @@
 .sentinel-badge {
     display: inline-block;
     padding: 0.25rem 0.75rem;
-    background: rgba(239, 68, 68, 0.2);
-    border: 1px solid rgba(239, 68, 68, 0.4);
+    background: rgba(255, 68, 79, 0.2);
+    border: 1px solid rgba(255, 68, 79, 0.4);
     border-radius: 20px;
     color: var(--danger);
     font-size: 0.75rem;
@@ -92,8 +93,8 @@
 .adaptive-badge {
     display: inline-block;
     padding: 0.2rem 0.6rem;
-    background: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    background: rgba(255, 68, 79, 0.15);
+    border: 1px solid rgba(255, 68, 79, 0.3);
     border-radius: 12px;
     color: var(--accent);
     font-size: 0.688rem;
@@ -105,14 +106,12 @@
 .sentinel-header h2 {
     font-size: 2rem;
     font-weight: 800;
-    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--accent);
 }
 
 .refresh-btn {
     padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    background: var(--accent);
     border: none;
     border-radius: 12px;
     color: white;
@@ -120,12 +119,13 @@
     font-size: 0.938rem;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 15px rgba(255, 68, 79, 0.3);
 }
 
 .refresh-btn:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 6px 20px rgba(255, 68, 79, 0.4);
+    background: var(--accent-hover);
 }
 
 .refresh-btn:disabled {
@@ -143,7 +143,7 @@
 
 .sentinel-stat-card {
     padding: 1.25rem;
-    background: rgba(30, 41, 59, 0.4);
+    background: rgba(32, 36, 47, 0.6);
     border: 1px solid var(--border);
     border-radius: 16px;
     backdrop-filter: blur(10px);
@@ -178,7 +178,7 @@
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--accent), #8b5cf6);
+    background: linear-gradient(90deg, var(--accent), var(--accent-hover));
     border-radius: 2px;
     transition: width 0.4s ease;
 }
@@ -191,7 +191,7 @@
     align-items: center;
     padding: 1.5rem;
     gap: 0.75rem;
-    background: rgba(30, 41, 59, 0.3);
+    background: rgba(32, 36, 47, 0.5);
     border: 1px dashed var(--border);
     border-radius: 16px;
 }
@@ -205,7 +205,7 @@
 .scanner-bar {
     width: 200px;
     height: 4px;
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(255, 68, 79, 0.15);
     border-radius: 2px;
     overflow: hidden;
     position: relative;
@@ -264,16 +264,16 @@
 /* ─── Intelligence Brief ─────────────────────────────────────────────────── */
 
 .intelligence-brief {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(139, 92, 246, 0.06));
-    border: 1px solid rgba(99, 102, 241, 0.2);
+    background: linear-gradient(135deg, rgba(255, 68, 79, 0.06), rgba(255, 68, 79, 0.03));
+    border: 1px solid rgba(255, 68, 79, 0.2);
     border-radius: 20px;
     padding: 1.5rem;
     animation: fadeInUp 0.5s ease-out;
 }
 
 .intelligence-brief.severity-CRITICAL {
-    border-color: rgba(239, 68, 68, 0.3);
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.02));
+    border-color: rgba(255, 68, 79, 0.4);
+    background: linear-gradient(135deg, rgba(255, 68, 79, 0.08), rgba(255, 68, 79, 0.04));
 }
 
 .brief-header {
@@ -284,7 +284,7 @@
 }
 
 .brief-badge {
-    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    background: var(--accent);
     color: white;
     padding: 0.3rem 1rem;
     border-radius: 20px;
@@ -351,10 +351,10 @@
 }
 
 .immediate-actions {
-    background: rgba(239, 68, 68, 0.04);
+    background: rgba(255, 68, 79, 0.04);
     padding: 1rem;
     border-radius: 12px;
-    border: 1px dashed rgba(239, 68, 68, 0.15);
+    border: 1px dashed rgba(255, 68, 79, 0.15);
 }
 
 .immediate-actions ol {
@@ -366,10 +366,10 @@
 .immediate-actions li { margin-bottom: 0.4rem; }
 
 .monitoring-recs {
-    background: rgba(16, 185, 129, 0.04);
+    background: rgba(0, 182, 123, 0.04);
     padding: 1rem;
     border-radius: 12px;
-    border: 1px dashed rgba(16, 185, 129, 0.15);
+    border: 1px dashed rgba(0, 182, 123, 0.15);
 }
 
 .monitoring-recs ul {
@@ -383,8 +383,8 @@
 /* ─── Threat Clusters ────────────────────────────────────────────────────── */
 
 .threat-clusters-section {
-    background: rgba(239, 68, 68, 0.03);
-    border: 1px solid rgba(239, 68, 68, 0.12);
+    background: rgba(255, 68, 79, 0.03);
+    border: 1px solid rgba(255, 68, 79, 0.12);
     border-radius: 20px;
     padding: 1.5rem;
     animation: fadeInUp 0.5s ease-out;
@@ -397,8 +397,8 @@
 .clusters-badge {
     display: inline-block;
     padding: 0.2rem 0.6rem;
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.2);
+    background: rgba(255, 68, 79, 0.1);
+    border: 1px solid rgba(255, 68, 79, 0.2);
     border-radius: 12px;
     color: var(--danger);
     font-size: 0.625rem;
@@ -421,7 +421,7 @@
 
 .cluster-card {
     padding: 1.25rem;
-    background: rgba(15, 23, 42, 0.5);
+    background: rgba(24, 28, 37, 0.7);
     border: 1px solid var(--border);
     border-radius: 16px;
     border-left: 4px solid var(--warning);
@@ -460,8 +460,8 @@
 
 .entity-tag {
     padding: 0.2rem 0.5rem;
-    background: rgba(99, 102, 241, 0.1);
-    border: 1px solid rgba(99, 102, 241, 0.2);
+    background: rgba(255, 68, 79, 0.1);
+    border: 1px solid rgba(255, 68, 79, 0.2);
     border-radius: 6px;
     font-size: 0.688rem;
     font-weight: 600;
@@ -470,7 +470,7 @@
 
 .cluster-action {
     padding: 0.6rem;
-    background: rgba(239, 68, 68, 0.06);
+    background: rgba(255, 68, 79, 0.06);
     border-radius: 8px;
     font-size: 0.75rem;
     color: var(--danger);
@@ -495,7 +495,7 @@
 }
 
 .sentinel-section {
-    background: rgba(30, 41, 59, 0.4);
+    background: rgba(32, 36, 47, 0.6);
     border: 1px solid var(--border);
     border-radius: 20px;
     display: flex;
@@ -505,7 +505,7 @@
 }
 
 .section-header {
-    background: rgba(15, 23, 42, 0.5);
+    background: rgba(24, 28, 37, 0.7);
     padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--border);
     display: flex;
@@ -525,7 +525,7 @@
 }
 
 .section-count {
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(255, 68, 79, 0.15);
     color: var(--accent);
     padding: 0.15rem 0.5rem;
     border-radius: 8px;
@@ -553,7 +553,7 @@
 
 .detection-card {
     padding: 1rem;
-    background: rgba(15, 23, 42, 0.6);
+    background: rgba(24, 28, 37, 0.8);
     border: 1px solid var(--border);
     border-radius: 12px;
     transition: all 0.3s ease;
@@ -598,9 +598,9 @@
 }
 
 .severity-pill.CRITICAL {
-    background: rgba(239, 68, 68, 0.2);
+    background: rgba(255, 68, 79, 0.2);
     color: var(--danger);
-    border: 1px solid rgba(239, 68, 68, 0.4);
+    border: 1px solid rgba(255, 68, 79, 0.4);
 }
 
 .severity-pill.HIGH {
@@ -610,15 +610,15 @@
 }
 
 .severity-pill.MEDIUM {
-    background: rgba(99, 102, 241, 0.2);
+    background: rgba(255, 68, 79, 0.2);
     color: var(--accent);
-    border: 1px solid rgba(99, 102, 241, 0.4);
+    border: 1px solid rgba(255, 68, 79, 0.4);
 }
 
 .severity-pill.LOW {
-    background: rgba(16, 185, 129, 0.2);
+    background: rgba(0, 182, 123, 0.2);
     color: var(--success);
-    border: 1px solid rgba(16, 185, 129, 0.4);
+    border: 1px solid rgba(0, 182, 123, 0.4);
 }
 
 .detection-time {
@@ -713,7 +713,7 @@
 }
 
 .logs-count {
-    background: rgba(99, 102, 241, 0.12);
+    background: rgba(255, 68, 79, 0.12);
     color: var(--accent);
     padding: 0.1rem 0.4rem;
     border-radius: 6px;
@@ -779,7 +779,7 @@
 
 .log-ERROR .log-level {
     color: var(--danger);
-    background: rgba(239, 68, 68, 0.1);
+    background: rgba(255, 68, 79, 0.1);
 }
 
 .log-msg {
@@ -806,7 +806,7 @@
 .sub-findings {
     margin-top: 1rem;
     padding-top: 1rem;
-    border-top: 1px dashed rgba(99, 102, 241, 0.25);
+    border-top: 1px dashed rgba(255, 68, 79, 0.25);
 }
 
 .sub-findings-header {
@@ -822,8 +822,8 @@
     margin-left: 1rem;
     padding: 0.75rem;
     position: relative;
-    background: rgba(99, 102, 241, 0.04);
-    border: 1px solid rgba(99, 102, 241, 0.12);
+    background: rgba(255, 68, 79, 0.04);
+    border: 1px solid rgba(255, 68, 79, 0.12);
     border-radius: 10px;
     margin-bottom: 0.5rem;
     animation: slideUp 0.4s ease-out;
@@ -873,7 +873,7 @@
     display: inline-block;
     margin-top: 0.4rem;
     padding: 0.15rem 0.5rem;
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(255, 68, 79, 0.1);
     border-radius: 6px;
     font-size: 0.625rem;
     font-weight: 700;
