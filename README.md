@@ -10,33 +10,56 @@
 
 ## 🏗️ System Architecture
 
-Our architecture leverages a state-of-the-art **multi-agent orchestration** flow, ensuring every query is classified, validated, and synthesized with "CIO-level" reasoning.
+Our engine utilizes a **Multi-Agent Decoupled Architecture** orchestrated via **LangGraph**. This ensures that every natural language request is not just translated, but validated, executed, and synthesized into strategic advice.
 
 ```mermaid
-graph TD
-    User([Executive Query]) --> Intent[Intent & Domain Classifier]
-    
-    subgraph "Orchestration Layer (LangGraph)"
-        Intent --> Resolve[Entity Resolution & Pre-processing]
-        Resolve --> SQLGen[SQL Generation Agent]
-        SQLGen --> Validator{SQL Validator}
-        Validator -- "Success" --> Exec[Database Execution]
-        Validator -- "Invalid" --> Repair[SQL Self-Repair Node]
-        Repair --> SQLGen
+graph LR
+    subgraph Client ["Executive Layer"]
+        A([User Query]) --- B[InsightOS Interface]
     end
 
-    subgraph "Reasoning Layer (The Virtual CIO)"
-        Exec --> Insight[Synthesis Agent]
-        Insight --> CIO[Actionable Recommendation Engine]
+    subgraph Orchestrator ["LangGraph Orchestration Layer"]
+        B --> C{Domain Router}
+        C -- "Security" --> D[Security Node]
+        C -- "Equity" --> E[Equity Node]
+        C -- "Ops" --> F[Ops Node]
+        D & E & F --> G[Few-Shot Retriever]
+        G --> H[SQL Generation Agent]
+        H --> I{SQL Validator}
+        I -- "Invalid" --> J[Self-Repair Logic]
+        J --> H
     end
 
-    CIO --> Result([InsightOS Dashboard])
-    
-    style User fill:#f9f,stroke:#333,stroke-width:2px
-    style CIO fill:#00d2ff,stroke:#333,stroke-width:4px
-    style SQLGen fill:#f96,stroke:#333
-    style Intent fill:#6b5b95,stroke:#fff,color:#fff
+    subgraph Data ["Execution & Storage Layer"]
+        I -- "Success" --> K[(Financial Database)]
+        K --> L[Structured JSON Result]
+    end
+
+    subgraph Reasoning ["The Virtual CIO Engine"]
+        L --> M[Contextual Synthesis Agent]
+        M --> N[Business Recommendation Engine]
+        N --> O([Actionable Insight Profile])
+    end
+
+    O --> B
+
+    %% Styling
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style C fill:#6b5b95,stroke:#fff,color:#fff
+    style H fill:#f96,stroke:#333
+    style I fill:#feb236,stroke:#333
+    style K fill:#d64161,stroke:#fff,color:#fff
+    style M fill:#00d2ff,stroke:#333,stroke-width:2px
+    style O fill:#3ff,stroke:#333,stroke-width:4px
 ```
+
+---
+
+### **Component Breakdown**
+1.  **Domain Router**: Automatically identifies the business context (Risk, Compliance, Operations) to select the correct prompt templates and few-shot examples.
+2.  **Few-Shot Retriever**: Injects ground-truth SQL examples into the prompt to ensure extreme precision for your specific schema.
+3.  **Self-Repair Node**: If a query fails, the system captures the SQLite error, feeds it back to Gemini, and regenerates a corrected version in real-time.
+4.  **CIO Reasoning Engine**: The final LLM pass that translates raw numbers into "Strategy-Speak," focusing on risk mitigation and revenue growth.
 
 ---
 
