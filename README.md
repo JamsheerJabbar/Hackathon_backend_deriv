@@ -10,122 +10,111 @@
 
 ## 🏗️ System Architecture
 
-Our engine utilizes a **Multi-Agent Orchestration Flow** powered by **LangGraph**. This ensures every natural language request is not just translated, but validated, executed, and synthesized into strategic advice.
+Our engine utilizes a **Multi-Agent Orchestration Flow** powered by **LangGraph**. This architecture decouples intent classification, schema reasoning, and executive synthesis into a high-precision pipeline.
 
 ```mermaid
-graph TD
-    subgraph Client ["Interface"]
-        A([Executive Query]) --> B[FastAPI Endpoint]
+flowchart TD
+    %% User Entry
+    User([Executive Query]) --> API[FastAPI Gateway]
+
+    subgraph NL2SQL_Core ["NL2SQL Orchestration Pipeline (LangGraph)"]
+        direction TB
+        API --> Intent[Intent & Domain Classifier]
+        Intent --> Router{Domain Specific?}
+        
+        Router -->|Operations| D1[Ops Context]
+        Router -->|Risk| D2[Risk Context]
+        Router -->|Security| D3[Security Context]
+        Router -->|Compliance| D4[Compliance Context]
+        
+        D1 & D2 & D3 & D4 --> Retriever[Few-Shot & Schema Retriever]
+        Retriever --> SQLGen[SQL Generation Agent]
+        
+        SQLGen --> Validator{SQL Validator}
+        Validator -->|Pass| Exec[Secure DB Execution]
+        Validator -->|Fail| Repair[Self-Repair Agent]
+        Repair --> SQLGen
     end
 
-    subgraph NL2SQL_Pipeline ["NL2SQL Orchestration Layer (LangGraph)"]
-        B --> C[Intent Classifier & Domain Router]
-        
-        %% Domain Logic
-        C -.-> |Domains| D{Operations | Risk | Security | Compliance}
-        D -.-> |Inject Context| E[Schema & Few-Shot Retriever]
-        
-        E --> F[SQL Generation Agent]
-        F --> G{SQL Validator}
-        
-        %% Self-Repair Loop
-        G -- "Invalid" --> H[Self-Repair Node]
-        H -- "Retry with Error" --> F
-        
-        G -- "Success" --> I[Secure Query Execution]
+    subgraph CIO_Reasoning ["The Virtual CIO Engine"]
+        direction TB
+        Exec --> Viz[Visual Preference Discovery]
+        Viz --> Insight[Executive Insight Synthesis]
+        Insight --> Recommendations[Actionable Strategy Generator]
     end
 
-    subgraph Reasoning ["The Virtual CIO Engine"]
-        I --> J[Visualization Discovery]
-        J --> K[Executive Insight Generator]
-        K --> L[Strategic Recommendation Engine]
-    end
-
-    L --> M([Final Executive Briefing])
-    M --> B
+    %% Result Delivery
+    Recommendations --> Dashboard([InsightOS Executive Briefing])
+    Dashboard -.-> |Feedback Loop| User
 
     %% Styling
-    style A fill:#f9f,stroke:#333,stroke-width:2px
-    style C fill:#6b5b95,stroke:#fff,color:#fff
-    style F fill:#f96,stroke:#333
-    style G fill:#feb236,stroke:#333
-    style I fill:#d64161,stroke:#fff,color:#fff
-    style L fill:#00d2ff,stroke:#333,stroke-width:2px
-    style M fill:#3ff,stroke:#333,stroke-width:4px
+    style User fill:#f9f,stroke:#333,stroke-width:2px
+    style Intent fill:#6b5b95,stroke:#fff,color:#fff
+    style SQLGen fill:#f96,stroke:#333
+    style Validator fill:#feb236,stroke:#333
+    style Exec fill:#d64161,stroke:#fff,color:#fff
+    style Dashboard fill:#3ff,stroke:#333,stroke-width:4px
+    style Recommendations fill:#00d2ff,stroke:#333,stroke-width:2px
 ```
 
 ---
 
-### **Pipeline Breakdown**
-1.  **Intent Classifier & Domain Router**: Determines the request type (Selection, Aggregation, Comparison) and maps it to one of our target domains: **Operations**, **Risk**, **Security**, or **Compliance**.
-2.  **Few-Shot Retriever**: Pulls domain-specific SQLite examples and schema metadata to provide "in-context learning" for the LLM.
-3.  **Self-Healing Logic**: If a generated SQL query fails validation or execution, the system captures the SQLite error, analyzes it, and performs a "hot-fix" to ensure continuity.
-4.  **Virtual CIO Node**: Instead of returning raw JSON, the final stage synthesizes data into human-readable **Insights** (what happened) and **Recommendations** (what to do next).
+## 🛠️ Pipeline Breakdown
+
+### 1. **Contextual Intent Layer**
+Unlike generic NL2SQL, InsightOS understands the **Domain Context** (Risk vs. Ops). This allows the system to differentiate between "flagged" for a fraud reason and "flagged" for a transaction status error.
+
+### 2. **Self-Healing SQL Agent**
+The system implements a **Retry & Repair** loop. If the generated SQLite is syntactically correct but functionally fails execution, the error message is fed back to the Agent for an immediate "hot-fix."
+
+### 3. **Executive Synthesis (The CIO)**
+The final output is not a JSON blob. It is a synthesized report containing:
+- **The Finding**: Direct answer to the query.
+- **The Insight**: Root cause analysis or trend detection.
+- **The Recommendation**: A suggested business action (e.g., "Adjust credit limits for High-Risk users").
 
 ---
 
 ## ✨ Key Features
 
-### 🧠 Strategic Synthesis (CIO Reasoning)
-Unlike standard query tools, InsightOS doesn't just return tables. It analyzes trends and provides two-step actionable advice for every result.
-*   *Example:* "We detected a 25% failure rate in Japanese logins. **Recommendation:** Audit the Tokyo gateway and implement adaptive MFA."
-
-### 🛡️ Multi-Domain Expertise
-InsightOS has specialized intelligence nodes for:
-*   **Operations:** Transaction volumes, volumes-by-country, and payment method efficiency.
-*   **Risk:** Real-time identification of 'Critical' and 'High' risk user profiles.
-*   **Compliance:** PEP tracking, AML alerts, and Sanctions matching.
-*   **Security:** Failed login patterns and brute-force detection.
-
-### ⚡ Self-Healing SQL Pipeline
-High-precision SQL generation powered by Gemini with a feedback loop that automatically repairs queries if execution fails.
+*   **🛡️ Multi-Domain Intelligence**: Dedicated prompts for Operations, Risk, Compliance, and Security.
+*   **📊 Dynamic Visualization**: Automatically chooses the best chart (Bar, Line, Pie, or Table) based on data distribution.
+*   **⚡ Sub-Second Latency**: Optimized query generation using Gemini 2.5 Flash.
+*   **🔌 Plug-and-Play**: Seamless integration with existing SQLite/SQLAlchemy databases.
 
 ---
 
 ## 🚀 Getting Started
 
-### 1. Prerequisite Setup
+### 1. Environment Setup
 ```bash
 python -m venv venv
 ./venv/Scripts/activate  # Windows
 pip install -r requirements.txt
 ```
 
-### 2. Environment Variables
-Create a `.env` file with your credentials:
+### 2. Configuration
+Create a `.env` file with your Google Gemini API Key:
 ```env
 GOOGLE_API_KEY=your_gemini_key
-REDIS_URL=optional_for_alerts
 DB_PATH=./derivinsightnew.db
 ```
 
-### 3. Launch the Backend
+### 3. Run the Platform
 ```bash
 python -m uvicorn app.main:app --reload --port 8080
 ```
 
 ---
 
-## 💎 Demo Verification (Try These Queries)
+## 💎 Demo Verification (Try These)
 
-InsightOS is stress-tested and verified for the following high-value executive questions:
-
-| Category | Question | Value Proposition |
+| Domain | Executive Question | Impact |
 | :--- | :--- | :--- |
-| **Growth** | *"Which countries have the highest number of active users?"* | Strategic Market Analysis |
-| **Risk** | *"Show me all users and their risk levels."* | Exposure Management |
-| **Ops** | *"What is the distribution of transaction statuses?"* | Processing Efficiency |
-| **Fraud** | *"List all transactions in 'FLAGGED' status."* | AML Compliance |
-| **Security** | *"Show me failed logins by failure reason and IP."* | Threat Intelligence |
-
----
-
-## 🛠️ Tech Stack
-*   **Orchestration:** [LangGraph](https://www.langchain.com/langgraph)
-*   **Intelligence:** [Google Gemini 2.5 Flash / 3-Flash-Preview](https://deepmind.google/technologies/gemini/)
-*   **API:** [FastAPI](https://fastapi.tiangolo.com/)
-*   **Database:** SQLAlchemy / SQLite
-*   **Frontend:** Vanilla JS / HTML5 (optimized for real-time dashboards)
+| **Risk** | *"Show me all users and their risk levels."* | **Critical Profile Alert** |
+| **Security**| *"Show me failed logins by reason and IP address."* | **Threat Intelligence** |
+| **Growth** | *"Which countries have the highest active users?"* | **Market Optimization** |
+| **Fraud** | *"List all transactions in 'FLAGGED' status."* | **AML Monitoring** |
 
 ---
 
