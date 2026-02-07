@@ -9,7 +9,7 @@ import os
 load_dotenv()
 
 # Default Redis URL (local); overridden by REDIS_URL or built from REDIS_* below
-_DEFAULT_REDIS_URL = "redis://localhost:6379/0"
+_DEFAULT_REDIS_URL = "hack-deriv-realtime-6ur8gt.serverless.aps1.cache.amazonaws.com:6379"
 
 
 class Settings(BaseSettings):
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     REDIS_HOST: Optional[str] = None
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: Optional[str] = None
-    REDIS_USE_SSL: bool = False  # Set True for AWS ElastiCache Valkey (in-transit encryption)
+    REDIS_USE_SSL: bool = True  # Set True for AWS ElastiCache Valkey (in-transit encryption)
     REDIS_DB: int = 0
 
     @model_validator(mode="after")
@@ -55,15 +55,15 @@ class Settings(BaseSettings):
         return self
     
     # ECS worker tasks (optional; if set, API can start/stop engine/generator via ECS)
-    ECS_CLUSTER: Optional[str] = None
-    ECS_TASK_DEFINITION: Optional[str] = None # single task def; command overridden per run
-    ECS_ENGINE_TASK_DEFINITION: Optional[str] = None  # fallback if ECS_TASK_DEFINITION not set
-    ECS_GENERATOR_TASK_DEFINITION: Optional[str] = None
+    ECS_CLUSTER: Optional[str] = os.getenv("ECS_CLUSTER", "HackathonDerivBackend")
+    ECS_TASK_DEFINITION: Optional[str] = os.getenv("ECS_TASK_DEFINITION", None) # single task def; command overridden per run
+    ECS_ENGINE_TASK_DEFINITION: Optional[str] = os.getenv("ECS_ENGINE_TASK_DEFINITION", None)  # fallback if ECS_TASK_DEFINITION not set
+    ECS_GENERATOR_TASK_DEFINITION: Optional[str] = os.getenv("ECS_GENERATOR_TASK_DEFINITION", None)
     ECS_ENGINE_WORKER_CONTAINER_NAME: str = "alerting-worker-container"  # MUST match container name in task definition
     ECS_GENERATOR_WORKER_CONTAINER_NAME: str = "event-generator-worker-container"
     
-    ECS_SUBNETS: Optional[str] = None  # comma-separated subnet IDs
-    ECS_SECURITY_GROUPS: Optional[str] = None  # comma-separated security group IDs
+    ECS_SUBNETS: Optional[str] = os.getenv("ECS_SUBNETS", None)  # comma-separated subnet IDs
+    ECS_SECURITY_GROUPS: Optional[str] = os.getenv("ECS_SECURITY_GROUPS", None)  # comma-separated security group IDs
     ECS_LAUNCH_TYPE: str = "FARGATE"
     
     # App Settings
