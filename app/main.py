@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from app.api.endpoints import router as api_router
 from app.api.alerts_endpoints import router as alerts_router
 from app.api.dashboard_endpoints import router as dashboard_router
+from app.api.db_test_endpoints import router as db_test_router
 from app.api.sentinel import router as sentinel_router
 from app.api.redis_test_endpoints import router as redis_test_router
 from app.core.config import settings
@@ -39,6 +40,7 @@ app.add_middleware(
 app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(alerts_router)  # Alerts API endpoints
 app.include_router(dashboard_router)  # Dashboard API endpoints
+app.include_router(db_test_router)  # Database testing endpoints
 app.include_router(sentinel_router, prefix="/api/v1/sentinel", tags=["sentinel"])
 app.include_router(redis_test_router)  # Redis/Valkey connectivity test
 
