@@ -74,7 +74,7 @@ class Settings(BaseSettings):
 
     # Slack Alerts
     SLACK_WEBHOOK_URL: Optional[str] = None  # Legacy webhook (optional fallback)
-    SLACK_BOT_TOKEN: Optional[str] = None    # Bot token (xoxb-...) for chat.postMessage API
+    SLACK_BOT_TOKEN: Optional[str] = os.getenv("SLACK_BOT_TOKEN", None)    # Bot token (xoxb-...) for chat.postMessage API
     SLACK_CHANNEL: str = "sentinnelanomalies" # Default channel name
     SLACK_ALERT_MIN_SEVERITY: str = "HIGH"   # Minimum severity to trigger Slack (HIGH or CRITICAL)
 
