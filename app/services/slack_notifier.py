@@ -1,13 +1,16 @@
 """
-Slack Notifier — sends Sentinel alerts to Slack via Workflow Trigger webhook.
+Slack Notifier — sends Sentinel alerts to Slack via chat.postMessage API (Bearer token).
 
 Setup:
-1. Set SLACK_WEBHOOK_URL in .env to your trigger URL
-2. Set SLACK_ALERT_MIN_SEVERITY to "HIGH" or "CRITICAL" (default: HIGH)
+1. Set SLACK_BOT_TOKEN in .env to your bot token (xoxb-...)
+2. Set SLACK_CHANNEL to the target channel name (default: sentinnelanomalies)
+3. Set SLACK_ALERT_MIN_SEVERITY to "HIGH" or "CRITICAL" (default: HIGH)
 """
 import httpx
 from app.core.config import settings
 from app.core.logger import logger
+
+SLACK_API_URL = "https://slack.com/api/chat.postMessage"
 
 SEVERITY_ORDER = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
 
@@ -17,15 +20,46 @@ def _should_alert(severity: str) -> bool:
     return SEVERITY_ORDER.get(severity, 0) >= SEVERITY_ORDER.get(min_sev, 2)
 
 
+async def _post_to_slack(channel: str, text: str) -> bool:
+    """
+    Post a message to Slack using the chat.postMessage API with Bearer token.
+    Returns True on success, False otherwise.
+    """
+    token = settings.SLACK_BOT_TOKEN
+    if not token:
+        logger.warning("SLACK_BOT_TOKEN not set — skipping Slack notification")
+        return False
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}",
+    }
+    payload = {
+        "channel": channel,
+        "text": text,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(SLACK_API_URL, json=payload, headers=headers)
+            body = resp.json()
+            if resp.status_code == 200 and body.get("ok"):
+                logger.info(f"Slack message sent to #{channel}")
+                return True
+            else:
+                error = body.get("error", resp.text)
+                logger.warning(f"Slack API error ({resp.status_code}): {error}")
+                return False
+    except Exception as e:
+        logger.error(f"Slack notification failed: {e}")
+        return False
+
+
 async def notify_slack(detection: dict) -> bool:
     """
     Send a single high-severity detection to Slack.
     Returns True if sent successfully, False otherwise.
     """
-    webhook_url = settings.SLACK_WEBHOOK_URL
-    if not webhook_url:
-        return False
-
     severity = detection.get("severity", "MEDIUM")
     if not _should_alert(severity):
         return False
@@ -64,34 +98,15 @@ async def notify_slack(detection: dict) -> bool:
         lines.append(f"\n*SQL:*\n```{sql}```")
 
     text = "\n".join(lines)
+    channel = settings.SLACK_CHANNEL
 
-    payload = {
-        "channel": "#alerts",
-        "text": text,
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(webhook_url, json=payload, headers={"Content-type": "application/json"})
-            if resp.status_code == 200:
-                logger.info(f"Slack alert sent: {mission_name} ({severity})")
-                return True
-            else:
-                logger.warning(f"Slack webhook returned {resp.status_code}: {resp.text}")
-                return False
-    except Exception as e:
-        logger.error(f"Slack notification failed: {e}")
-        return False
+    return await _post_to_slack(channel, text)
 
 
 async def notify_slack_narrative(narrative: dict) -> bool:
     """
     Send the executive intelligence brief summary to Slack.
     """
-    webhook_url = settings.SLACK_WEBHOOK_URL
-    if not webhook_url:
-        return False
-
     overall_risk = narrative.get("overall_risk", 0)
     overall_severity = narrative.get("overall_severity", "LOW")
     if not _should_alert(overall_severity):
@@ -115,21 +130,6 @@ async def notify_slack_narrative(narrative: dict) -> bool:
         lines.append(f"\n*Immediate Actions:*\n{actions_text}")
 
     text = "\n".join(lines)
+    channel = settings.SLACK_CHANNEL
 
-    payload = {
-        "channel": "#alerts",
-        "text": text,
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(webhook_url, json=payload, headers={"Content-type": "application/json"})
-            if resp.status_code == 200:
-                logger.info(f"Slack narrative sent (risk {overall_risk}/100)")
-                return True
-            else:
-                logger.warning(f"Slack narrative webhook returned {resp.status_code}: {resp.text}")
-                return False
-    except Exception as e:
-        logger.error(f"Slack narrative notification failed: {e}")
-        return False
+    return await _post_to_slack(channel, text)
