@@ -64,7 +64,7 @@ export default function ChatInterface({ domain }: ChatInterfaceProps) {
             if (data.status === 'success') {
                 toast.success('Query executed successfully!');
             } else if (data.status === 'needs_clarification') {
-                toast.info('Need more information');
+                toast('Need more information', { icon: 'ℹ️' });
             } else {
                 toast.error('Query failed');
             }

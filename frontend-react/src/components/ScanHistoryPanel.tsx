@@ -30,7 +30,7 @@ export default function ScanHistoryPanel({ onClose, onSelectScan }: ScanHistoryP
                 setScans(data.scans || []);
                 setLoading(false);
             })
-            .catch(err => {
+            .catch(() => {
                 setError('Failed to load scan history');
                 setLoading(false);
             });
