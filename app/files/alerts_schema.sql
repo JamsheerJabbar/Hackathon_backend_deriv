@@ -112,3 +112,16 @@ VALUES (4, 'Transaction Volume Spike', 'Triggers when total transaction volume i
 INSERT IGNORE INTO metric_specs (metric_id, name, description, table_name, filter_json, window_sec, threshold, severity)
 VALUES (5, 'User Registration Spike', 'Triggers when new user registrations spike',
         'user', '{}', 1800, 50, 'low');
+
+CREATE TABLE dashboards (
+    dashboard_id VARCHAR(36) PRIMARY KEY,
+    name TEXT,
+    owner_id TEXT,
+    widgets TEXT,
+    layout TEXT,
+    is_deployed BOOLEAN,
+    deploy_url TEXT,
+    refresh_interval INTEGER,
+    created_at DATETIME,
+    deployed_at DATETIME
+);
