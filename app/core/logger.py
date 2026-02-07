@@ -1,7 +1,50 @@
 import logging
 import sys
+import time
+import contextvars
 from logging.handlers import RotatingFileHandler
 import os
+
+# ─── Per-mission log capture via contextvars ──────────────────────────────────
+# Each asyncio Task gets its own copy, so concurrent missions don't mix logs.
+_mission_log_buffer: contextvars.ContextVar[list | None] = contextvars.ContextVar(
+    "_mission_log_buffer", default=None
+)
+
+
+class MissionLogHandler(logging.Handler):
+    """Captures log records into a per-task buffer when one is active."""
+
+    # Map workflow filenames to friendly node labels
+    _NODE_LABELS = {
+        "workflow.py": "ORCHESTRATOR",
+        "intent_classification.py": "INTENT",
+        "clarification.py": "CLARIFY",
+        "preprocessing.py": "PREPROCESS",
+        "sql_generation.py": "SQL_GEN",
+        "validation.py": "VALIDATE",
+        "database.py": "DB_EXEC",
+        "visualization.py": "VISUALIZE",
+        "insight_generation.py": "INSIGHT",
+        "sentinel_agent.py": "SENTINEL",
+        "risk_scorer.py": "RISK_SCORE",
+        "deep_dive.py": "DEEP_DIVE",
+        "correlation_engine.py": "CORRELATE",
+        "narrative_generator.py": "NARRATIVE",
+        "sentinel.py": "API",
+    }
+
+    def emit(self, record: logging.LogRecord):
+        buf = _mission_log_buffer.get(None)
+        if buf is not None:
+            node = self._NODE_LABELS.get(record.filename, record.filename)
+            buf.append({
+                "ts": round(record.created, 3),
+                "level": record.levelname,
+                "node": node,
+                "msg": record.getMessage(),
+            })
+
 
 def setup_logging():
     """
@@ -10,11 +53,11 @@ def setup_logging():
     """
     # Create logs directory if it doesn't exist
     os.makedirs("logs", exist_ok=True)
-    
+
     # Configure root logger
     logger = logging.getLogger("nl2sql")
     logger.setLevel(logging.INFO)
-    
+
     # Prevent duplicate logs if already configured
     if logger.handlers:
         return logger
@@ -35,6 +78,9 @@ def setup_logging():
     )
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
+
+    # Mission log capture handler (no formatter needed, stores structured data)
+    logger.addHandler(MissionLogHandler())
 
     return logger
 

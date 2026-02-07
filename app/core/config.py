@@ -66,6 +66,16 @@ class Settings(BaseSettings):
     ECS_SECURITY_GROUPS: Optional[str] = os.getenv("ECS_SECURITY_GROUPS", None)  # comma-separated security group IDs
     ECS_LAUNCH_TYPE: str = "FARGATE"
     
+    # Sentinel v2 Feature Flags
+    DEEP_DIVE_ENABLED: bool = True
+    DEEP_DIVE_MAX_DEPTH: int = 2
+    CORRELATION_ENABLED: bool = True
+    ADAPTIVE_ENABLED: bool = True
+
+    # Slack Alerts
+    SLACK_WEBHOOK_URL: Optional[str] = None  # Set in .env to enable Slack alerts
+    SLACK_ALERT_MIN_SEVERITY: str = "HIGH"   # Minimum severity to trigger Slack (HIGH or CRITICAL)
+
     # App Settings
     LOG_LEVEL: str = "INFO"
     
