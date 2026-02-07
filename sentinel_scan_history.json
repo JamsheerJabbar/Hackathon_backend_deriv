@@ -414,5 +414,81 @@
       "operations": 22
     },
     "critical_domains": []
+  },
+  {
+    "timestamp": "2026-02-07T11:57:16.412420",
+    "missions": [
+      {
+        "name": "PEP Status Discrepancies in High-Volume Trading",
+        "query": "Analyze transactions for users flagged as 'is_pep' (Politically Exposed Person) and having a 'risk_level' of 'HIGH' or 'CRITICAL'. Specifically, look for significant transaction volumes in instruments not typically associated with public office or for transactions that bypass standard due diligence checks, suggesting potential misuse of PEP status for illicit financial activities.",
+        "domain": "compliance",
+        "risk_score": 0,
+        "severity": "LOW",
+        "data_count": 0
+      },
+      {
+        "name": "Intermittent Payment Method Failures",
+        "query": "Investigate users who repeatedly experience payment failures across multiple transaction types (deposit/withdrawal) using the same 'payment_method' within a 24-hour period, but with no consistent 'flag_reason'. This could indicate a systemic issue with a specific payment processor or an emerging fraud vector targeting particular payment channels.",
+        "domain": "operations",
+        "risk_score": 0,
+        "severity": "LOW",
+        "data_count": 0
+      },
+      {
+        "name": "User Performance Drop Post-Login Anomaly",
+        "query": "For users who have experienced an 'unusual login' event (e.g., from a new country or device type), analyze their subsequent transaction success rate and volume for a 48-hour period. Identify if there's a statistically significant drop in their trading activity or an increase in transaction failures, which could indicate account compromise or user distress.",
+        "domain": "operations",
+        "risk_score": 0,
+        "severity": "LOW",
+        "data_count": 0
+      },
+      {
+        "name": "Concentrated High-Risk Instrument Exposure by Age",
+        "query": "Segment users by age groups and analyze their exposure to high-risk instruments (e.g., highly volatile cryptocurrencies, leveraged derivatives). Identify if specific age demographics are disproportionately concentrated in these instruments, particularly if their 'risk_score' is also elevated, suggesting potential predatory targeting or immature risk assessment.",
+        "domain": "risk",
+        "risk_score": 0,
+        "severity": "LOW",
+        "data_count": 0
+      },
+      {
+        "name": "Collateralization Risk in High-Risk Accounts",
+        "query": "Examine users with a 'risk_level' of 'HIGH' or 'CRITICAL' and a 'kyc_status' of 'PENDING'. Analyze their transaction history to determine if they are engaging in significant leveraged trading or depositing assets that are highly susceptible to market volatility without adequate collateralization. This aims to identify potential cascading failures within a vulnerable user segment.",
+        "domain": "risk",
+        "risk_score": 0,
+        "severity": "LOW",
+        "data_count": 0
+      },
+      {
+        "name": "Suspicious Login Pattern Correlation",
+        "query": "Identify user clusters exhibiting successful logins from geographically disparate locations within a single hour, where the same user_id simultaneously attempts logins from multiple distinct cities and countries, using different device types but originating from a narrow range of IP addresses. This aims to detect advanced credential stuffing or botnet-driven account takeovers.",
+        "domain": "security",
+        "risk_score": 0,
+        "severity": "LOW",
+        "data_count": 0
+      },
+      {
+        "name": "Anomalous Transactional Behavior Post-Login",
+        "query": "For users who experience a failed login attempt followed immediately by a successful login from a different country within 5 minutes, analyze their subsequent transaction patterns for any high-value transfers, exotic instrument trades, or rapid liquidation of assets within the next hour. This seeks to identify potential account takeovers where compromised credentials were used for immediate illicit activity.",
+        "domain": "security",
+        "risk_score": 0,
+        "severity": "LOW",
+        "data_count": 0
+      },
+      {
+        "name": "Unflagged High-Risk International Transactions",
+        "query": "Identify all transactions where the 'flag_reason' is null, but the transaction involves users with 'PENDING' or 'FAILED' KYC status, a 'risk_level' of 'HIGH' or 'CRITICAL', and the transaction originated from a country not on a predefined list of low-risk jurisdictions. This aims to uncover potential AML/KYC evasion through unflagged international activity.",
+        "domain": "compliance",
+        "risk_score": 0,
+        "severity": "LOW",
+        "data_count": 0
+      }
+    ],
+    "domain_scores": {
+      "compliance": 0,
+      "operations": 0,
+      "risk": 0,
+      "security": 0
+    },
+    "critical_domains": []
   }
 ]

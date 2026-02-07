@@ -181,11 +181,8 @@ export default function SentinelDashboard({ historicalScan, onBackToLive }: Sent
         };
     }, []);
 
-    // Auto-scan on mount (skip if viewing history)
+    // Cleanup EventSource on unmount
     useEffect(() => {
-        if (!historicalScan) {
-            runScan();
-        }
         return () => {
             eventSourceRef.current?.close();
         };
