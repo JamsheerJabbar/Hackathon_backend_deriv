@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     # Option A: Set REDIS_URL directly (e.g. rediss://:AUTH_TOKEN@host:6379/0)
     REDIS_URL: str = _DEFAULT_REDIS_URL
     # Option B: Build URL from parts (REDIS_HOST takes precedence over REDIS_URL)
-    REDIS_HOST: Optional[str] = "hack-deriv-realtime-6ur8gt.serverless.aps1.cache.amazonaws.com:6379"
+    REDIS_HOST: Optional[str] = "hack-deriv-realtime-6ur8gt.serverless.aps1.cache.amazonaws.com"
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: Optional[str] = None
     REDIS_USE_SSL: bool = True  # Set True for AWS ElastiCache Valkey (in-transit encryption)
