@@ -89,6 +89,9 @@ interface SentinelDashboardProps {
     onBackToLive?: () => void;
 }
 
+// Polling interval in milliseconds
+const POLL_INTERVAL = 3000;
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function SentinelDashboard({ historicalScan, onBackToLive }: SentinelDashboardProps) {
@@ -101,7 +104,14 @@ export default function SentinelDashboard({ historicalScan, onBackToLive }: Sent
     const [progress, setProgress] = useState({ completed: 0, total: 0 });
     const [adaptiveContext, setAdaptiveContext] = useState<any>(null);
     const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
-    const eventSourceRef = useRef<EventSource | null>(null);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const stopPolling = useCallback(() => {
+        if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+        }
+    }, []);
 
     const toggleLogs = (missionId: string) => {
         setExpandedLogs(prev => {
@@ -112,6 +122,20 @@ export default function SentinelDashboard({ historicalScan, onBackToLive }: Sent
         });
     };
 
+    // Map backend phase names to frontend phase names
+    const mapPhase = (backendPhase: string): string => {
+        switch (backendPhase) {
+            case 'brainstorming': return 'brainstorming';
+            case 'executing': return 'executing';
+            case 'deep_dive': return 'analyzing';
+            case 'correlating': return 'correlating';
+            case 'briefing': return 'briefing';
+            case 'complete': return 'complete';
+            case 'error': return 'error';
+            default: return 'executing';
+        }
+    };
+
     const runScan = useCallback(() => {
         // Reset state
         setDetections([]);
@@ -120,79 +144,63 @@ export default function SentinelDashboard({ historicalScan, onBackToLive }: Sent
         setMissionPlan([]);
         setPhase('brainstorming');
         setProgress({ completed: 0, total: 0 });
+        stopPolling();
 
-        // Close previous connection
-        if (eventSourceRef.current) {
-            eventSourceRef.current.close();
-        }
+        // POST to start the scan, then poll for status
+        fetch(`${API_BASE_URL}/api/v1/sentinel/scan/start`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                const scanId: string = data.scan_id;
 
-        const es = new EventSource(`${API_BASE_URL}/api/v1/sentinel/scan/stream`);
-        eventSourceRef.current = es;
+                const poll = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/api/v1/sentinel/scan/status/${scanId}`);
+                        if (!res.ok) return; // transient error, keep polling
+                        const status = await res.json();
 
-        es.addEventListener('scan_started', (e) => {
-            const data = JSON.parse(e.data);
-            setMissionPlan(data.missions);
-            setProgress({ completed: 0, total: data.total_missions });
-            setAdaptiveContext(data.adaptive_context);
-            setPhase('executing');
-        });
+                        // Update all UI state from the poll response
+                        setPhase(mapPhase(status.phase));
+                        if (status.progress) setProgress(status.progress);
+                        if (status.missions?.length) setMissionPlan(status.missions);
+                        if (status.detections) setDetections(status.detections);
+                        if (status.clusters) setClusters(status.clusters);
+                        if (status.narrative) setNarrative(status.narrative);
+                        if (status.adaptive_context) setAdaptiveContext(status.adaptive_context);
 
-        es.addEventListener('mission_complete', (e) => {
-            const det: Detection = JSON.parse(e.data);
-            setDetections(prev => [...prev, det]);
-            setProgress(prev => ({ ...prev, completed: prev.completed + 1 }));
-        });
+                        // Stop polling when scan is done
+                        if (status.status === 'complete') {
+                            stopPolling();
+                            setScanCount(prev => prev + 1);
+                            setPhase('complete');
+                        } else if (status.status === 'failed') {
+                            stopPolling();
+                            setPhase('error');
+                        }
+                    } catch {
+                        // Network error — keep polling, don't crash
+                        console.warn('Poll failed, retrying...');
+                    }
+                };
 
-        es.addEventListener('scan_complete', () => {
-            setPhase('analyzing');
-        });
+                // Start polling
+                pollRef.current = setInterval(poll, POLL_INTERVAL);
+                // Also do one immediate poll
+                poll();
+            })
+            .catch(() => {
+                setPhase('error');
+            });
+    }, [stopPolling]);
 
-        es.addEventListener('deep_dive_started', (e) => {
-            const data = JSON.parse(e.data);
-            setProgress(prev => ({
-                ...prev,
-                total: prev.total + data.followup_count,
-            }));
-        });
-
-        es.addEventListener('correlation_started', () => {
-            setPhase('correlating');
-        });
-
-        es.addEventListener('correlation_complete', (e) => {
-            const data = JSON.parse(e.data);
-            setClusters(data.clusters || []);
-        });
-
-        es.addEventListener('narrative_started', () => {
-            setPhase('briefing');
-        });
-
-        es.addEventListener('narrative_complete', (e) => {
-            const data: Narrative = JSON.parse(e.data);
-            setNarrative(data);
-            setScanCount(prev => prev + 1);
-            setPhase('complete');
-            es.close();
-        });
-
-        es.onerror = () => {
-            setPhase('error');
-            es.close();
-        };
-    }, []);
-
-    // Cleanup EventSource on unmount
+    // Cleanup polling on unmount
     useEffect(() => {
-        return () => {
-            eventSourceRef.current?.close();
-        };
-    }, []);
+        return () => stopPolling();
+    }, [stopPolling]);
 
     // Load historical scan data when prop changes
     useEffect(() => {
         if (historicalScan) {
-            eventSourceRef.current?.close();
+            stopPolling();
             setDetections(historicalScan.detections || []);
             setClusters(historicalScan.clusters || []);
             setNarrative(historicalScan.narrative || null);
