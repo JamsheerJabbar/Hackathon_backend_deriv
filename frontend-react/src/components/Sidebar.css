@@ -1,13 +1,13 @@
 .sidebar {
     width: 280px;
-    background: rgba(32, 36, 47, 0.8);
-    backdrop-filter: blur(10px);
+    background: var(--color-white);
     border-right: 1px solid var(--border);
     padding: 1.5rem;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    border-radius: 10px 0 0 10px;
 }
 
 .sidebar-section {
@@ -54,7 +54,7 @@
 }
 
 .mode-toggle-btn.active {
-    background: var(--bg-primary);
+    background: var(--color-dark-navy);
     box-shadow: 0 4px 15px rgba(24, 28, 37, 0.3);
 }
 
@@ -83,8 +83,8 @@
 .history-btn {
     width: 100%;
     padding: 0.75rem 1rem;
-    background: rgba(42, 47, 58, 0.6);
-    border: 1px solid var(--border);
+    background: var(--color-light-gray);
+    border: 1px solid #e0e0e0;
     border-radius: 10px;
     color: var(--text-primary);
     font-size: 0.875rem;
@@ -98,7 +98,7 @@
 }
 
 .history-btn:hover {
-    background: rgba(255, 68, 79, 0.15);
+    background: rgba(255, 68, 79, 0.1);
     border-color: var(--accent);
     color: var(--accent);
     transform: translateY(-1px);
@@ -113,8 +113,8 @@
 
 .domain-btn {
     padding: 0.75rem 1rem;
-    background: rgba(42, 47, 58, 0.6);
-    border: 1px solid var(--border);
+    background: var(--color-light-gray);
+    border: 1px solid #e0e0e0;
     border-radius: 8px;
     color: var(--text-primary);
     font-size: 0.875rem;
@@ -127,13 +127,13 @@
 }
 
 .domain-btn:hover {
-    background: rgba(42, 47, 58, 0.8);
     border-color: var(--accent);
+    color: var(--accent);
     transform: translateX(4px);
 }
 
 .domain-btn.active {
-    background: rgba(255, 68, 79, 0.2);
+    background: rgba(255, 68, 79, 0.1);
     border-color: var(--accent);
     color: var(--accent);
 }
@@ -151,7 +151,7 @@
 
 .example-item {
     padding: 0.75rem;
-    background: rgba(42, 47, 58, 0.5);
+    background: var(--color-light-gray);
     border-radius: 8px;
     font-size: 0.813rem;
     color: var(--text-secondary);
@@ -163,7 +163,7 @@
 }
 
 .example-item:hover {
-    background: rgba(42, 47, 58, 0.7);
+    background: rgba(255, 68, 79, 0.05);
     color: var(--text-primary);
 }
 
@@ -187,8 +187,8 @@
 
 .api-config input {
     padding: 0.5rem;
-    background: rgba(24, 28, 37, 0.7);
-    border: 1px solid var(--border);
+    background: var(--color-white);
+    border: 1px solid #ddd;
     border-radius: 6px;
     color: var(--text-primary);
     font-size: 0.813rem;
@@ -210,10 +210,46 @@
 }
 
 .sidebar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.1);
     border-radius: 3px;
 }
 
 .sidebar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .sidebar {
+        background: var(--color-dark-navy);
+        border-right-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .history-btn,
+    .domain-btn,
+    .example-item {
+        background: var(--color-darker-navy);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: var(--color-white);
+    }
+
+    .domain-btn:hover,
+    .example-item:hover {
+        background: rgba(255, 68, 79, 0.1);
+        color: var(--color-white);
+    }
+
+    .api-config input {
+        background: var(--color-darker-navy);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: var(--color-white);
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
 }
